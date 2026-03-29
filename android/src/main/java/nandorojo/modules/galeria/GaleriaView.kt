@@ -50,6 +50,8 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     private lateinit var viewer: ImageViewerBuilder
     lateinit var urls: Array<String>
     val onIndexChange by EventDispatcher()
+    val onViewerOpen by EventDispatcher()
+    val onViewerDismiss by EventDispatcher()
     var theme: Theme = Theme.Dark
     var initialIndex: Int = 0
     var disableHiddenOriginalImage = false
@@ -124,13 +126,19 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                 childView.setOnClickListener {
                     setupConfig()
                     if (!disableHiddenOriginalImage) {
-                        viewer.setViewerCallback(CustomViewerCallback(childView as ImageView) { index ->
-                            onIndexChange(mapOf("currentIndex" to index))
-                        })
+                        viewer.setViewerCallback(CustomViewerCallback(
+                            childView as ImageView,
+                            onIndexChange = { index ->
+                                onIndexChange(mapOf("currentIndex" to index))
+                            },
+                            onDismiss = {
+                                onViewerDismiss(emptyMap<String, Any>())
+                            }
+                        ))
                     }
 
                     viewer.show()
-
+                    onViewerOpen(mapOf("currentIndex" to initialIndex))
                 }
             } else if (childView is ViewGroup) {
                 setupImageViewer(childView)
@@ -179,17 +187,20 @@ class GaleriaView(context: Context) : ViewGroup(context) {
 
 }
 
-class CustomViewerCallback(private val childView: ImageView, private val onIndexChange: (Int) -> Unit) : ViewerCallback {
+class CustomViewerCallback(
+    private val childView: ImageView,
+    private val onIndexChange: (Int) -> Unit,
+    private val onDismiss: () -> Unit = {}
+) : ViewerCallback {
     override fun onInit(viewHolder: RecyclerView.ViewHolder, position: Int) {
         childView.animate().alpha(0f).setDuration(180).start()
-
     }
-
 
     override fun onRelease(viewHolder: RecyclerView.ViewHolder, view: View) {
         Handler(Looper.getMainLooper()).postDelayed({
             childView.alpha = 1f
         }, 230)
+        onDismiss()
     }
 
     override fun onPageSelected(position: Int, viewHolder: RecyclerView.ViewHolder) {

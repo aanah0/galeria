@@ -82,6 +82,8 @@ class GaleriaView: ExpoView {
   var imageBackgroundColor: UIColor?
   let onPressRightNavItemIcon = EventDispatcher()
   let onIndexChange = EventDispatcher()
+  let onViewerOpen = EventDispatcher()
+  let onViewerDismiss = EventDispatcher()
 
   public func setupImageView() {
     let viewerTheme = theme.toImageViewerTheme()
@@ -159,10 +161,16 @@ class GaleriaView: ExpoView {
         self?.onIndexChange(["currentIndex": index])
       })
 
-      options.append(
-        .onDismiss { [weak self] in
-            self?.restoreKeyboard()
-        })
+    options.append(
+      .onOpen { [weak self] index in
+        self?.onViewerOpen(["currentIndex": index])
+      })
+
+    options.append(
+      .onDismiss { [weak self] in
+        self?.restoreKeyboard()
+        self?.onViewerDismiss([:])
+      })
 
     options.append(.hideBlurOverlay(hideBlurOverlay))
     options.append(.hidePageIndicators(hidePageIndicators))

@@ -15,6 +15,22 @@ type GaleriaIndexChangedPayload = {
 export type GaleriaIndexChangedEvent =
   NativeSyntheticEvent<GaleriaIndexChangedPayload>
 
+export type GaleriaViewerOpenEvent =
+  NativeSyntheticEvent<{ currentIndex: number }>
+
+export type GaleriaViewerDismissEvent =
+  NativeSyntheticEvent<{}>
+
+export type GaleriaOverlayRenderProps = {
+  currentIndex: number
+  total: number
+  urls: string[]
+}
+
+export type GaleriaOverlayProps = {
+  children: (props: GaleriaOverlayRenderProps) => React.ReactNode
+}
+
 export interface GaleriaViewProps {
   index?: number
   id?: string

@@ -9,6 +9,7 @@ class ImageViewerRootView: UIView, RootViewType {
     var theme: ImageViewerTheme = .dark
     var options: [ImageViewerOption] = []
     var onIndexChange: ((Int) -> Void)?
+    var onOpen: ((Int) -> Void)?
     var onDismiss: (() -> Void)?
     var sourceImage: UIImage?
     var hideBlurOverlay: Bool = false
@@ -67,6 +68,7 @@ class ImageViewerRootView: UIView, RootViewType {
         UIView.animate(withDuration: 0.25) {
             self.navBar.alpha = 1.0
         }
+        onOpen?(currentIndex)
     }
 
     func willDisappear(animated: Bool) {
@@ -196,6 +198,8 @@ class ImageViewerRootView: UIView, RootViewType {
                 onRightNavBarTapped = onTap
             case .onIndexChange(let callback):
                 self.onIndexChange = callback
+            case .onOpen(let callback):
+                self.onOpen = callback
             case .onDismiss(let callback):
                 self.onDismiss = callback
             case .contentMode:

@@ -1,6 +1,7 @@
 'use client'
 import {
   useState,
+  useCallback,
   useId,
   ComponentProps,
   useRef,
@@ -12,7 +13,7 @@ import {
 import { createPortal } from 'react-dom'
 import { useWindowDimensions } from 'react-native' // TODO: remove this
 
-import { GaleriaViewProps } from './Galeria.types'
+import { GaleriaOverlayProps, GaleriaViewProps } from './Galeria.types'
 import type Native from './GaleriaView.ios'
 
 import { LayoutGroup, motion, useDomEvent } from 'framer-motion'
@@ -26,7 +27,7 @@ function Image({
   dynamicAspectRatio = false,
 }: GaleriaViewProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { urls, theme, imageBackgroundColor } = useContext(GaleriaContext)
+  const { urls, theme, imageBackgroundColor, setViewerVisible, setViewerCurrentIndex } = useContext(GaleriaContext)
   const url = urls?.[index]
   const [aspectRatio, setAspectRatio] = useState(1)
   const id = useId()
@@ -58,6 +59,8 @@ function Image({
     const imageNode = getFirstImageChild(e.target as Node)
     if (imageNode) {
       setIsOpen(true)
+      setViewerVisible(true, index)
+      setViewerCurrentIndex(index)
       const ratio = getNodeAspectRatio(imageNode)
       setAspectRatio(ratio)
       if (
@@ -109,7 +112,7 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
           : children}
       </motion.div>
 
-      <PopupModal visible={isOpen} onClose={() => setIsOpen(false)}>
+      <PopupModal visible={isOpen} onClose={() => { setIsOpen(false); setViewerVisible(false) }}>
         <WindowDimensions>
           {(dimensions) => {
             // given the image aspect ratio, and the window dimensions, we want to derive the proper height and width
@@ -187,7 +190,10 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
 
         <OnScrollOnce
           onScroll={() => {
-            isOpen && setIsOpen(false)
+            if (isOpen) {
+              setIsOpen(false)
+              setViewerVisible(false)
+            }
           }}
         />
       </PopupModal>
@@ -213,6 +219,16 @@ function Root({
         src: string
         initialIndex: number
       })
+  const [viewerVisible, setViewerVisible] = useState(false)
+  const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0)
+
+  const handleSetViewerVisible = useCallback((visible: boolean, currentIndex?: number) => {
+    setViewerVisible(visible)
+    if (currentIndex !== undefined) {
+      setViewerCurrentIndex(currentIndex)
+    }
+  }, [])
+
   return (
     <GaleriaContext.Provider
       value={{
@@ -223,6 +239,10 @@ function Root({
         urls,
         theme,
         imageBackgroundColor,
+        viewerVisible,
+        viewerCurrentIndex,
+        setViewerVisible: handleSetViewerVisible,
+        setViewerCurrentIndex,
         ...(openState.open
           ? {
               open: true,
@@ -311,8 +331,46 @@ function PopupModal({
   return elementRef.current ? createPortal(node, elementRef.current) : null
 }
 
+function Overlay({ children }: GaleriaOverlayProps) {
+  const { viewerVisible, viewerCurrentIndex, urls } = useContext(GaleriaContext)
+
+  const resolvedUrls = (urls ?? []).map((url) => {
+    if (typeof url === 'string') return url
+    return String(url)
+  })
+
+  if (!viewerVisible) return null
+
+  const overlayContent = children({
+    currentIndex: viewerCurrentIndex,
+    total: resolvedUrls.length,
+    urls: resolvedUrls,
+  })
+
+  // Render into a portal so it sits above the popup modal
+  const element = document.createElement('div')
+  element.setAttribute('galeria-overlay', '1')
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        pointerEvents: 'none',
+      }}
+    >
+      <div style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
+        {overlayContent}
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 const Galeria: typeof Native = Object.assign(Root, {
   Image,
+  Overlay,
   Popup: () => null,
 })
 

@@ -23,6 +23,10 @@ export const GaleriaContext = createContext({
   hideBlurOverlay: false,
   hidePageIndicators: false,
   imageBackgroundColor: undefined as string | undefined,
+  viewerVisible: false,
+  viewerCurrentIndex: 0,
+  setViewerVisible: (_visible: boolean, _currentIndex?: number) => {},
+  setViewerCurrentIndex: (_index: number) => {},
 })
 
 export type GaleriaContext = ContextType<typeof GaleriaContext>
