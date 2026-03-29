@@ -41,6 +41,9 @@ class GaleriaModule : Module() {
             Prop("transitionOffsetX") { view: GaleriaView, transitionOffsetX: Int? ->
                 view.transitionOffsetX = transitionOffsetX
             }
+            Prop("imageBackgroundColor") { view: GaleriaView, imageBackgroundColor: String? ->
+                view.imageBackgroundColor = imageBackgroundColor
+            }
         }
     }
 }

@@ -17,6 +17,7 @@ const NativeImage = requireNativeView<
     urls?: string[]
     theme: 'dark' | 'light'
     onIndexChange?: (event: GaleriaIndexChangedEvent) => void
+    imageBackgroundColor?: string
   }
 >('Galeria')
 
@@ -28,9 +29,10 @@ const Galeria = Object.assign(
     urls,
     theme = 'dark',
     ids,
+    imageBackgroundColor,
   }: {
     children: React.ReactNode
-  } & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls'>>) {
+  } & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor'>>) {
     return (
       <GaleriaContext.Provider
         value={{
@@ -39,6 +41,7 @@ const Galeria = Object.assign(
           closeIconName: undefined,
           urls,
           theme,
+          imageBackgroundColor,
           initialIndex: 0,
           open: false,
           src: '',
@@ -52,7 +55,7 @@ const Galeria = Object.assign(
   },
   {
     Image({ edgeToEdge, ...props }: GaleriaViewProps) {
-      const { theme, urls } = useContext(GaleriaContext)
+      const { theme, urls, imageBackgroundColor } = useContext(GaleriaContext)
 
       if (__DEV__) {
         // warn the user once about unnecessary defined prop
@@ -64,6 +67,7 @@ const Galeria = Object.assign(
           onIndexChange={props.onIndexChange}
           edgeToEdge={EDGE_TO_EDGE || (edgeToEdge ?? false)}
           theme={theme}
+          imageBackgroundColor={props.imageBackgroundColor ?? imageBackgroundColor}
           urls={urls?.map((url) => {
             if (typeof url === 'string') {
               return url

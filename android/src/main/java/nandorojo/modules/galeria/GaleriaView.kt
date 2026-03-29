@@ -56,6 +56,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     var edgeToEdge = false
     var transitionOffsetY: Int? = null
     var transitionOffsetX: Int? = 0
+    var imageBackgroundColor: String? = null
     val viewModel: ImageViewerActionViewModel by lazy {
         ViewModelProvider(getViewModelOwner(context)).get(ImageViewerActionViewModel::class.java)
     }
@@ -163,7 +164,11 @@ class GaleriaView(context: Context) : ViewGroup(context) {
         }
 
         Config.TRANSITION_OFFSET_X = transitionOffsetX ?: 0
-        Config.VIEWER_BACKGROUND_COLOR = theme.toImageViewerTheme()
+        Config.VIEWER_BACKGROUND_COLOR = if (imageBackgroundColor != null) {
+            Color.parseColor(imageBackgroundColor)
+        } else {
+            theme.toImageViewerTheme()
+        }
     }
 
 

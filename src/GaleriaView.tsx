@@ -26,7 +26,7 @@ function Image({
   dynamicAspectRatio = false,
 }: GaleriaViewProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { urls, theme } = useContext(GaleriaContext)
+  const { urls, theme, imageBackgroundColor } = useContext(GaleriaContext)
   const url = urls?.[index]
   const [aspectRatio, setAspectRatio] = useState(1)
   const id = useId()
@@ -80,7 +80,7 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
       }
     }
   }
-  const background = {
+  const background = imageBackgroundColor ?? {
     light: '#ffffff',
     dark: '#000000',
   }[theme]
@@ -200,6 +200,7 @@ function Root({
   urls,
   theme = 'dark',
   ids,
+  imageBackgroundColor,
 }: ComponentProps<typeof Native>) {
   const [openState, setOpen] = useState({
     open: false,
@@ -221,6 +222,7 @@ function Root({
         setOpen,
         urls,
         theme,
+        imageBackgroundColor,
         ...(openState.open
           ? {
               open: true,

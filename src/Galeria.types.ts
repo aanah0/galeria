@@ -27,4 +27,9 @@ export interface GaleriaViewProps {
   onIndexChange?: (event: GaleriaIndexChangedEvent) => void
   hideBlurOverlay?: boolean
   hidePageIndicators?: boolean
+  /**
+   * Background color of the image viewer. Overrides the theme color.
+   * Accepts any valid color string (e.g. '#FF0000', 'rgba(0,0,0,0.9)', 'red').
+   */
+  imageBackgroundColor?: string
 }
