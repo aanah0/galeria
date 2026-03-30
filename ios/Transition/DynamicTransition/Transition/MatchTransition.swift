@@ -240,6 +240,11 @@ public class MatchTransition: InteractiveTransition {
         switch gr.state {
         case .began:
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            NotificationCenter.default.post(
+                name: .galeriaOverlayToggle,
+                object: nil,
+                userInfo: ["visible": false]
+            )
 
             // If we're interrupting a PRESENT animation, we need to cancel it and start a fresh dismiss
             // Otherwise the transition is set up for presenting, not dismissing
@@ -288,7 +293,15 @@ public class MatchTransition: InteractiveTransition {
                 animator[foregroundContainerView, \UIView.center].dismissedValue = targetOffset
                 animator[foregroundContainerView, \UIView.rotation].dismissedValue = targetRotation
             }
-            animateTo(position: shouldDismiss ? .dismissed : .presented)
+            let targetPosition: TransitionEndPosition = shouldDismiss ? .dismissed : .presented
+            if !shouldDismiss {
+                NotificationCenter.default.post(
+                    name: .galeriaOverlayToggle,
+                    object: nil,
+                    userInfo: ["visible": true]
+                )
+            }
+            animateTo(position: targetPosition)
         }
     }
 

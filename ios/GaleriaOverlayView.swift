@@ -52,7 +52,7 @@ class GaleriaOverlayView: ExpoView {
         containerView.frame = vc.view.bounds
         containerView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         containerView.isHidden = false
-        containerView.alpha = 1.0
+        containerView.alpha = 0.0
 
         window.isHidden = false
 

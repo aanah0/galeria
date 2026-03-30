@@ -69,6 +69,11 @@ class ImageViewerRootView: UIView, RootViewType {
         UIView.animate(withDuration: 0.25) {
             self.navBar.alpha = 1.0
         }
+        NotificationCenter.default.post(
+            name: .galeriaOverlayToggle,
+            object: nil,
+            userInfo: ["visible": true, "animated": true]
+        )
         onOpen?(currentIndex)
     }
 
