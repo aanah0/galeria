@@ -7,8 +7,9 @@ class ImageViewerController: UIViewController {
 
     var index: Int = 0
     var imageItem: ImageItem!
-    
+
     var initialPlaceholder: UIImage?
+    var imageBackgroundColor: UIColor?
 
     private var top: NSLayoutConstraint!
     private var leading: NSLayoutConstraint!
@@ -63,6 +64,10 @@ class ImageViewerController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        if let bgColor = imageBackgroundColor {
+            imageView.backgroundColor = bgColor
+        }
 
         switch imageItem {
         case .image(let img):

@@ -1,7 +1,7 @@
 import { requireNativeView } from 'expo'
 
 import { useCallback, useContext, useState } from 'react'
-import { Image, Modal } from 'react-native'
+import { Image, StyleSheet } from 'react-native'
 import type { SFSymbol } from 'sf-symbols-typescript'
 import { GaleriaContext } from './context'
 import {
@@ -25,6 +25,11 @@ const NativeImage = requireNativeView<
     imageBackgroundColor?: string
   }
 >('Galeria')
+
+const NativeOverlayView = requireNativeView<{
+  visible: boolean
+  children?: React.ReactNode
+}>('GaleriaOverlay')
 
 const noop = () => {}
 
@@ -128,16 +133,16 @@ const Galeria = Object.assign(
         return Image.resolveAssetSource(url).uri
       })
 
-      if (!viewerVisible) return null
-
       return (
-        <Modal visible transparent animationType="none" statusBarTranslucent>
-          {children({
-            currentIndex: viewerCurrentIndex,
-            total: resolvedUrls.length,
-            urls: resolvedUrls,
-          })}
-        </Modal>
+        <NativeOverlayView visible={viewerVisible} style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          {viewerVisible
+            ? children({
+                currentIndex: viewerCurrentIndex,
+                total: resolvedUrls.length,
+                urls: resolvedUrls,
+              })
+            : null}
+        </NativeOverlayView>
       )
     },
     Popup: (() => null) as React.FC<{

@@ -126,8 +126,10 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                 childView.setOnClickListener {
                     setupConfig()
                     if (!disableHiddenOriginalImage) {
+                        val parsedBgColor = imageBackgroundColor?.let { Color.parseColor(it) }
                         viewer.setViewerCallback(CustomViewerCallback(
                             childView as ImageView,
+                            imageBackgroundColor = parsedBgColor,
                             onIndexChange = { index ->
                                 onIndexChange(mapOf("currentIndex" to index))
                             },
@@ -172,11 +174,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
         }
 
         Config.TRANSITION_OFFSET_X = transitionOffsetX ?: 0
-        Config.VIEWER_BACKGROUND_COLOR = if (imageBackgroundColor != null) {
-            Color.parseColor(imageBackgroundColor)
-        } else {
-            theme.toImageViewerTheme()
-        }
+        Config.VIEWER_BACKGROUND_COLOR = theme.toImageViewerTheme()
     }
 
 
@@ -189,11 +187,15 @@ class GaleriaView(context: Context) : ViewGroup(context) {
 
 class CustomViewerCallback(
     private val childView: ImageView,
+    private val imageBackgroundColor: Int? = null,
     private val onIndexChange: (Int) -> Unit,
     private val onDismiss: () -> Unit = {}
 ) : ViewerCallback {
     override fun onInit(viewHolder: RecyclerView.ViewHolder, position: Int) {
         childView.animate().alpha(0f).setDuration(180).start()
+        if (imageBackgroundColor != null) {
+            viewHolder.itemView.findViewById<ImageView>(R.id.imageView)?.setBackgroundColor(imageBackgroundColor)
+        }
     }
 
     override fun onRelease(viewHolder: RecyclerView.ViewHolder, view: View) {
@@ -205,6 +207,9 @@ class CustomViewerCallback(
 
     override fun onPageSelected(position: Int, viewHolder: RecyclerView.ViewHolder) {
         onIndexChange(position)
+        if (imageBackgroundColor != null) {
+            viewHolder.itemView.findViewById<ImageView>(R.id.imageView)?.setBackgroundColor(imageBackgroundColor)
+        }
     }
 }
 

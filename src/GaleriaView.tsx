@@ -341,16 +341,6 @@ function Overlay({ children }: GaleriaOverlayProps) {
 
   if (!viewerVisible) return null
 
-  const overlayContent = children({
-    currentIndex: viewerCurrentIndex,
-    total: resolvedUrls.length,
-    urls: resolvedUrls,
-  })
-
-  // Render into a portal so it sits above the popup modal
-  const element = document.createElement('div')
-  element.setAttribute('galeria-overlay', '1')
-
   return createPortal(
     <div
       style={{
@@ -360,9 +350,11 @@ function Overlay({ children }: GaleriaOverlayProps) {
         pointerEvents: 'none',
       }}
     >
-      <div style={{ pointerEvents: 'auto', width: '100%', height: '100%' }}>
-        {overlayContent}
-      </div>
+      {children({
+        currentIndex: viewerCurrentIndex,
+        total: resolvedUrls.length,
+        urls: resolvedUrls,
+      })}
     </div>,
     document.body,
   )

@@ -14,6 +14,7 @@ class ImageViewerRootView: UIView, RootViewType {
     var sourceImage: UIImage?
     var hideBlurOverlay: Bool = false
     var hidePageIndicators: Bool = false
+    var imageBackgroundColor: UIColor?
 
     private var pageViewController: UIPageViewController!
     private(set) lazy var backgroundView: UIView = {
@@ -104,6 +105,7 @@ class ImageViewerRootView: UIView, RootViewType {
         super.init(frame: .zero)
         setupViews()
         applyOptions()
+        applyImageBackgroundColor()
         setupGestures()
     }
 
@@ -133,11 +135,11 @@ class ImageViewerRootView: UIView, RootViewType {
                 imageLoader: imageLoader
             )
             self.initialViewController = initialVC
-            
+
             if let sourceImage = self.sourceImage {
                 initialVC.initialPlaceholder = sourceImage
             }
-            
+
             initialVC.view.gestureRecognizers?.removeAll(where: { $0 is UIPanGestureRecognizer })
             pageViewController.setViewControllers([initialVC], direction: .forward, animated: false)
 
@@ -209,9 +211,14 @@ class ImageViewerRootView: UIView, RootViewType {
             case .hidePageIndicators(let hide):
                 self.hidePageIndicators = hide
             case .imageBackgroundColor(let color):
-                backgroundView.backgroundColor = color
+                self.imageBackgroundColor = color
             }
         }
+    }
+
+    private func applyImageBackgroundColor() {
+        guard let color = imageBackgroundColor else { return }
+        initialViewController?.imageBackgroundColor = color
     }
 
     private func setupGestures() {
@@ -313,6 +320,7 @@ extension ImageViewerRootView: UIPageViewControllerDataSource {
             imageItem: datasource.imageItem(at: newIndex),
             imageLoader: imageLoader
         )
+        newVC.imageBackgroundColor = imageBackgroundColor
         newVC.view.gestureRecognizers?.removeAll(where: { $0 is UIPanGestureRecognizer })
         return newVC
     }
@@ -333,6 +341,7 @@ extension ImageViewerRootView: UIPageViewControllerDataSource {
             imageItem: datasource.imageItem(at: newIndex),
             imageLoader: imageLoader
         )
+        newVC.imageBackgroundColor = imageBackgroundColor
         newVC.view.gestureRecognizers?.removeAll(where: { $0 is UIPanGestureRecognizer })
         return newVC
     }
