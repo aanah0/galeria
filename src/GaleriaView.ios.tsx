@@ -83,7 +83,7 @@ const Galeria = Object.assign(
     )
   },
   {
-    Image(props: GaleriaViewProps) {
+    Image({ onIndexChange: userOnIndexChange, ...restProps }: GaleriaViewProps) {
       const {
         theme, urls, initialIndex, closeIconName,
         hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
@@ -92,8 +92,8 @@ const Galeria = Object.assign(
 
       const handleIndexChange = useCallback((event: GaleriaIndexChangedEvent) => {
         setViewerCurrentIndex(event.nativeEvent.currentIndex)
-        props.onIndexChange?.(event)
-      }, [props.onIndexChange, setViewerCurrentIndex])
+        userOnIndexChange?.(event)
+      }, [userOnIndexChange, setViewerCurrentIndex])
 
       const handleViewerOpen = useCallback((event: GaleriaViewerOpenEvent) => {
         setViewerVisible(true, event.nativeEvent.currentIndex)
@@ -110,9 +110,9 @@ const Galeria = Object.assign(
           onViewerDismiss={handleViewerDismiss}
           closeIconName={closeIconName}
           theme={theme}
-          hideBlurOverlay={props.hideBlurOverlay ?? hideBlurOverlay}
-          hidePageIndicators={props.hidePageIndicators ?? hidePageIndicators}
-          imageBackgroundColor={props.imageBackgroundColor ?? imageBackgroundColor}
+          hideBlurOverlay={restProps.hideBlurOverlay ?? hideBlurOverlay}
+          hidePageIndicators={restProps.hidePageIndicators ?? hidePageIndicators}
+          imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor}
           urls={urls?.map((url) => {
             if (typeof url === 'string') {
               return url
@@ -121,7 +121,7 @@ const Galeria = Object.assign(
             return Image.resolveAssetSource(url).uri
           })}
           index={initialIndex}
-          {...props}
+          {...restProps}
         />
       )
     },
@@ -135,13 +135,11 @@ const Galeria = Object.assign(
 
       return (
         <NativeOverlayView visible={viewerVisible} style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          {viewerVisible
-            ? children({
-                currentIndex: viewerCurrentIndex,
-                total: resolvedUrls.length,
-                urls: resolvedUrls,
-              })
-            : null}
+          {children({
+            currentIndex: viewerCurrentIndex,
+            total: resolvedUrls.length,
+            urls: resolvedUrls,
+          })}
         </NativeOverlayView>
       )
     },

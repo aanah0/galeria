@@ -81,7 +81,7 @@ const Galeria = Object.assign(
     )
   },
   {
-    Image({ edgeToEdge, ...props }: GaleriaViewProps) {
+    Image({ edgeToEdge, onIndexChange: userOnIndexChange, ...restProps }: GaleriaViewProps) {
       const { theme, urls, imageBackgroundColor, setViewerVisible, setViewerCurrentIndex } =
         useContext(GaleriaContext)
 
@@ -91,8 +91,8 @@ const Galeria = Object.assign(
 
       const handleIndexChange = useCallback((event: GaleriaIndexChangedEvent) => {
         setViewerCurrentIndex(event.nativeEvent.currentIndex)
-        props.onIndexChange?.(event)
-      }, [props.onIndexChange, setViewerCurrentIndex])
+        userOnIndexChange?.(event)
+      }, [userOnIndexChange, setViewerCurrentIndex])
 
       const handleViewerOpen = useCallback((event: GaleriaViewerOpenEvent) => {
         setViewerVisible(true, event.nativeEvent.currentIndex)
@@ -109,7 +109,7 @@ const Galeria = Object.assign(
           onViewerDismiss={handleViewerDismiss}
           edgeToEdge={EDGE_TO_EDGE || (edgeToEdge ?? false)}
           theme={theme}
-          imageBackgroundColor={props.imageBackgroundColor ?? imageBackgroundColor}
+          imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor}
           urls={urls?.map((url) => {
             if (typeof url === 'string') {
               return url
@@ -117,7 +117,7 @@ const Galeria = Object.assign(
 
             return Image.resolveAssetSource(url).uri
           })}
-          {...props}
+          {...restProps}
         />
       )
     },
@@ -131,13 +131,11 @@ const Galeria = Object.assign(
 
       return (
         <NativeOverlayView visible={viewerVisible} style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          {viewerVisible
-            ? children({
-                currentIndex: viewerCurrentIndex,
-                total: resolvedUrls.length,
-                urls: resolvedUrls,
-              })
-            : null}
+          {children({
+            currentIndex: viewerCurrentIndex,
+            total: resolvedUrls.length,
+            urls: resolvedUrls,
+          })}
         </NativeOverlayView>
       )
     },

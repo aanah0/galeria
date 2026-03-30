@@ -259,9 +259,15 @@ class ImageViewerRootView: UIView, RootViewType {
 
     @objc private func didSingleTap() {
         let currentAlpha = navBar.alpha
+        let newAlpha: CGFloat = currentAlpha > 0.5 ? 0.0 : 1.0
         UIView.animate(withDuration: 0.235) {
-            self.navBar.alpha = currentAlpha > 0.5 ? 0.0 : 1.0
+            self.navBar.alpha = newAlpha
         }
+        NotificationCenter.default.post(
+            name: .galeriaOverlayToggle,
+            object: nil,
+            userInfo: ["visible": newAlpha > 0.5]
+        )
     }
 
     @objc private func didTapRightNavItem() {
@@ -355,6 +361,10 @@ extension ImageViewerRootView: UIPageViewControllerDataSource {
     func presentationIndex(for pageViewController: UIPageViewController) -> Int {
         return currentIndex
     }
+}
+
+extension Notification.Name {
+    static let galeriaOverlayToggle = Notification.Name("galeriaOverlayToggle")
 }
 
 extension ImageViewerRootView: UIPageViewControllerDelegate {

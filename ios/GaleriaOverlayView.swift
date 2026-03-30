@@ -12,6 +12,7 @@ class GaleriaOverlayView: ExpoView {
     private let containerView = PassthroughContainerView()
     private var overlayWindow: PassthroughWindow?
     private var isContainerAdded = false
+    private var overlayObserver: NSObjectProtocol?
 
     var visible: Bool = false {
         didSet {
@@ -27,6 +28,7 @@ class GaleriaOverlayView: ExpoView {
         guard !isContainerAdded else { return }
         isContainerAdded = true
         containerView.backgroundColor = .clear
+        containerView.isHidden = true
         addSubview(containerView)
     }
 
@@ -49,15 +51,34 @@ class GaleriaOverlayView: ExpoView {
         vc.view.addSubview(containerView)
         containerView.frame = vc.view.bounds
         containerView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        containerView.isHidden = false
+        containerView.alpha = 1.0
 
         window.isHidden = false
 
         overlayWindow = window
+
+        overlayObserver = NotificationCenter.default.addObserver(
+            forName: .galeriaOverlayToggle,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let visible = notification.userInfo?["visible"] as? Bool else { return }
+            UIView.animate(withDuration: 0.235) {
+                self?.containerView.alpha = visible ? 1.0 : 0.0
+            }
+        }
     }
 
     private func hideOverlay() {
         guard let window = overlayWindow else { return }
 
+        if let observer = overlayObserver {
+            NotificationCenter.default.removeObserver(observer)
+            overlayObserver = nil
+        }
+
+        containerView.isHidden = true
         containerView.removeFromSuperview()
         addSubview(containerView)
         containerView.frame = bounds
@@ -67,18 +88,6 @@ class GaleriaOverlayView: ExpoView {
         overlayWindow = nil
     }
 
-    #if !RCT_NEW_ARCH_ENABLED
-    override func insertReactSubview(_ subview: UIView!, at atIndex: Int) {
-        ensureContainerAdded()
-        containerView.insertSubview(subview, at: atIndex)
-    }
-
-    override func removeReactSubview(_ subview: UIView!) {
-        subview.removeFromSuperview()
-    }
-    #endif
-
-    #if RCT_NEW_ARCH_ENABLED
     override func mountChildComponentView(_ childComponentView: UIView, index: Int) {
         ensureContainerAdded()
         containerView.insertSubview(childComponentView, at: index)
@@ -87,7 +96,6 @@ class GaleriaOverlayView: ExpoView {
     override func unmountChildComponentView(_ childComponentView: UIView, index: Int) {
         childComponentView.removeFromSuperview()
     }
-    #endif
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -97,6 +105,9 @@ class GaleriaOverlayView: ExpoView {
     }
 
     deinit {
+        if let observer = overlayObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
         overlayWindow?.isHidden = true
         overlayWindow?.rootViewController = nil
         overlayWindow = nil
