@@ -68,7 +68,9 @@ public class TransitionAnimator {
         }
         targetPosition = position
         seekTo(position: position)
-        for completion in completions.reversed() {
+        let completionsCopy = completions
+        completions.removeAll()
+        for completion in completionsCopy.reversed() {
             completion(position)
         }
     }
