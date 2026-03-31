@@ -153,7 +153,9 @@ extension UIImageView {
         _tapRecognizer!.initialIndex = initialIndex
         _tapRecognizer!.options = options
         _tapRecognizer!.from = from
-        addGestureRecognizer(_tapRecognizer!)
+        if _tapRecognizer!.view !== self {
+            addGestureRecognizer(_tapRecognizer!)
+        }
     }
 
     @objc

@@ -1,28 +1,45 @@
 import Foundation
+import UIKit
 #if canImport(SDWebImage)
 import SDWebImage
 #endif
 
+public protocol ImageLoadTask {
+    func cancel()
+}
+
 public protocol ImageLoader {
-    func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, disableCache: Bool, completion: @escaping (_ image: UIImage?) -> Void)
+    @discardableResult
+    func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, disableCache: Bool, completion: @escaping (_ image: UIImage?) -> Void) -> ImageLoadTask
 }
 
 extension ImageLoader {
-    func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, completion: @escaping (_ image: UIImage?) -> Void) {
-        loadImage(url, placeholder: placeholder, imageView: imageView, disableCache: false, completion: completion)
+    @discardableResult
+    func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, completion: @escaping (_ image: UIImage?) -> Void) -> ImageLoadTask {
+        loadImage(
+            url,
+            placeholder: placeholder,
+            imageView: imageView,
+            disableCache: false,
+            completion: completion
+        )
     }
 }
 
 public struct URLSessionImageLoader: ImageLoader {
     public init() {}
 
-    public func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, disableCache: Bool, completion: @escaping (UIImage?) -> Void) {
+    public func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, disableCache: Bool, completion: @escaping (UIImage?) -> Void) -> ImageLoadTask {
         if let placeholder = placeholder {
             imageView.image = placeholder
         }
 
         let request = URLRequest(url: url, cachePolicy: disableCache ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy)
-        URLSession.shared.dataTask(with: request) { data, _, _ in
+        let task = URLSession.shared.dataTask(with: request) { data, _, error in
+            if let error = error as? URLError, error.code == .cancelled {
+                return
+            }
+
             guard let data = data, let image = UIImage(data: data) else {
                 DispatchQueue.main.async { completion(nil) }
                 return
@@ -31,15 +48,31 @@ public struct URLSessionImageLoader: ImageLoader {
                 imageView.image = image
                 completion(image)
             }
-        }.resume()
+        }
+
+        task.resume()
+        return URLSessionImageLoadTask(task: task)
+    }
+}
+
+private final class URLSessionImageLoadTask: ImageLoadTask {
+    private var task: URLSessionDataTask?
+
+    init(task: URLSessionDataTask?) {
+        self.task = task
+    }
+
+    func cancel() {
+        task?.cancel()
+        task = nil
     }
 }
 
 #if canImport(SDWebImage)
 struct SDWebImageLoader: ImageLoader {
-    func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, disableCache: Bool, completion: @escaping (UIImage?) -> Void) {
+    func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, disableCache: Bool, completion: @escaping (UIImage?) -> Void) -> ImageLoadTask {
         let options: SDWebImageOptions = disableCache ? [.refreshCached, .fromLoaderOnly] : []
-        imageView.sd_setImage(
+        let operation = imageView.sd_setImage(
             with: url,
             placeholderImage: placeholder,
             options: options,
@@ -48,6 +81,24 @@ struct SDWebImageLoader: ImageLoader {
                     completion(img)
                 }
         }
+
+        return SDWebImageImageLoadTask(imageView: imageView, operation: operation)
+    }
+}
+
+private final class SDWebImageImageLoadTask: ImageLoadTask {
+    private weak var imageView: UIImageView?
+    private var operation: SDWebImageOperation?
+
+    init(imageView: UIImageView, operation: SDWebImageOperation?) {
+        self.imageView = imageView
+        self.operation = operation
+    }
+
+    func cancel() {
+        operation?.cancel()
+        imageView?.sd_cancelCurrentImageLoad()
+        operation = nil
     }
 }
 #endif

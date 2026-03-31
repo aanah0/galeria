@@ -7,7 +7,10 @@ class TransitionContainerTracker {
         var presentedCount: Int = 0
         var transitionCount: Int = 0
     }
-    private var containers: [UIView: ContainerContext] = [:]
+    private let containers = NSMapTable<UIView, ContainerContext>(
+        keyOptions: .weakMemory,
+        valueOptions: .strongMemory
+    )
 
     func transitionStart(from: UIView, to: UIView) {
         if self[from].presentedCount == 0, self[from].transitionCount == 0 {
@@ -27,32 +30,49 @@ class TransitionContainerTracker {
 
     private func cleanupContainers() {
         var toBeRemoved: [UIView] = []
-        var toKeepContainers: Set<UIView> = containers.keys.set
-        for (view, context) in containers {
+        var toKeepContainers = Set(allViews())
+
+        for view in allViews() {
+            guard let context = containers.object(forKey: view) else { continue }
             //            print("\(type(of: view)): \(context.transitionCount) \(context.presentedCount)")
             if context.transitionCount <= 0 && context.presentedCount <= 0 {
                 toBeRemoved.append(view)
                 toKeepContainers.remove(view)
             }
         }
+
         for toBeRemove in toBeRemoved {
             for childToKeep in toBeRemove.subviews.filter({ toKeepContainers.contains($0) }) {
                 toBeRemove.superview?.insertSubview(childToKeep, aboveSubview: toBeRemove)
             }
             toBeRemove.removeFromSuperview()
-            containers[toBeRemove] = nil
+            containers.removeObject(forKey: toBeRemove)
         }
     }
 
     private subscript(view: UIView) -> ContainerContext {
         get {
-            if containers[view] == nil {
-                containers[view] = ContainerContext()
+            if let context = containers.object(forKey: view) {
+                return context
             }
-            return containers[view]!
+
+            let context = ContainerContext()
+            containers.setObject(context, forKey: view)
+            return context
         }
         set {
-            containers[view] = newValue
+            containers.setObject(newValue, forKey: view)
         }
+    }
+
+    private func allViews() -> [UIView] {
+        let enumerator = containers.keyEnumerator()
+        var views: [UIView] = []
+
+        while let view = enumerator.nextObject() as? UIView {
+            views.append(view)
+        }
+
+        return views
     }
 }

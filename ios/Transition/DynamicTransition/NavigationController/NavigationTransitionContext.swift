@@ -40,6 +40,7 @@ public class NavigationTransitionContext: TransitionContext {
             (from as? RootViewType)?.didAppear(animated: true)
         }
         onUpdate(self)
+        onUpdate = { _ in }  // Break reference chain after completion
     }
 
     public func beginInteractiveTransition() {

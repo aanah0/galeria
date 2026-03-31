@@ -38,6 +38,7 @@ class ImageViewerRootView: UIView, RootViewType {
 
     private(set) var currentIndex: Int = 0
     private var initialViewController: ImageViewerController?
+    private var hasCleanedUp = false
 
     var currentImageView: UIImageView? {
         if let vc = pageViewController?.viewControllers?.first as? ImageViewerController {
@@ -91,9 +92,20 @@ class ImageViewerRootView: UIView, RootViewType {
     }
 
     private func cleanup() {
+        guard !hasCleanedUp else { return }
+        hasCleanedUp = true
+
+        pageViewController.viewControllers?.compactMap { $0 as? ImageViewerController }.forEach {
+            $0.releaseResources()
+        }
+        pageViewController.children.compactMap { $0 as? ImageViewerController }.forEach {
+            $0.releaseResources()
+        }
+
         pageViewController.dataSource = nil
         pageViewController.delegate = nil
         initialViewController = nil
+        imageDatasource = nil
         onDismiss = nil
         onIndexChange = nil
         onOpen = nil
@@ -134,6 +146,10 @@ class ImageViewerRootView: UIView, RootViewType {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        cleanup()
     }
 
     private func setupViews() {
