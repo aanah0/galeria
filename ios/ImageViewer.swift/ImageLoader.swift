@@ -72,7 +72,7 @@ private final class URLSessionImageLoadTask: ImageLoadTask {
 struct SDWebImageLoader: ImageLoader {
     func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, disableCache: Bool, completion: @escaping (UIImage?) -> Void) -> ImageLoadTask {
         let options: SDWebImageOptions = disableCache ? [.refreshCached, .fromLoaderOnly] : []
-        let operation = imageView.sd_setImage(
+        imageView.sd_setImage(
             with: url,
             placeholderImage: placeholder,
             options: options,
@@ -82,23 +82,19 @@ struct SDWebImageLoader: ImageLoader {
                 }
         }
 
-        return SDWebImageImageLoadTask(imageView: imageView, operation: operation)
+        return SDWebImageImageLoadTask(imageView: imageView)
     }
 }
 
 private final class SDWebImageImageLoadTask: ImageLoadTask {
     private weak var imageView: UIImageView?
-    private var operation: SDWebImageOperation?
 
-    init(imageView: UIImageView, operation: SDWebImageOperation?) {
+    init(imageView: UIImageView) {
         self.imageView = imageView
-        self.operation = operation
     }
 
     func cancel() {
-        operation?.cancel()
         imageView?.sd_cancelCurrentImageLoad()
-        operation = nil
     }
 }
 #endif
