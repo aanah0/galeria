@@ -91,7 +91,6 @@ class ImageViewerRootView: UIView, RootViewType {
     private func cleanup() {
         pageViewController.dataSource = nil
         pageViewController.delegate = nil
-        pageViewController.setViewControllers([], direction: .forward, animated: false)
         initialViewController = nil
         onDismiss = nil
         onIndexChange = nil
