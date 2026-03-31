@@ -3,6 +3,7 @@ import {
   useState,
   useCallback,
   useId,
+  useMemo,
   forwardRef,
   useImperativeHandle,
   useRef,
@@ -92,9 +93,15 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
   }[theme]
   const [wasOpen, setWasOpen] = useState(false)
 
-  if (isOpen && !wasOpen) {
-    setWasOpen(true)
-  }
+  useEffect(() => {
+    if (isOpen && !wasOpen) {
+      setWasOpen(true)
+    } else if (!isOpen && wasOpen) {
+      const timer = setTimeout(() => setWasOpen(false), 500)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [isOpen, wasOpen])
 
   return (
     <>
@@ -239,36 +246,42 @@ const Root = forwardRef<GaleriaRef, {
     }
   }, [])
 
+  const contextValue = useMemo(() => ({
+    hideBlurOverlay: false,
+    hidePageIndicators: false,
+    closeIconName: undefined,
+    showOverlayAfterOpen,
+    showPageIndicator,
+    disableCache: false,
+    setOpen,
+    urls,
+    theme,
+    imageBackgroundColor,
+    viewerVisible,
+    viewerCurrentIndex,
+    setViewerVisible: handleSetViewerVisible,
+    setViewerCurrentIndex,
+    ...(openState.open
+      ? {
+          open: true,
+          src: openState.src,
+          initialIndex: openState.initialIndex,
+        }
+      : {
+          open: false,
+          src: '',
+          initialIndex: 0,
+        }),
+    ids,
+  }), [
+    showOverlayAfterOpen, showPageIndicator, setOpen, urls, theme,
+    imageBackgroundColor, viewerVisible, viewerCurrentIndex,
+    handleSetViewerVisible, setViewerCurrentIndex, openState, ids,
+  ])
+
   return (
     <GaleriaContext.Provider
-      value={{
-        hideBlurOverlay: false,
-        hidePageIndicators: false,
-        closeIconName: undefined,
-        showOverlayAfterOpen,
-        showPageIndicator,
-        disableCache: false,
-        setOpen,
-        urls,
-        theme,
-        imageBackgroundColor,
-        viewerVisible,
-        viewerCurrentIndex,
-        setViewerVisible: handleSetViewerVisible,
-        setViewerCurrentIndex,
-        ...(openState.open
-          ? {
-              open: true,
-              src: openState.src,
-              initialIndex: openState.initialIndex,
-            }
-          : {
-              open: false,
-              src: '',
-              initialIndex: 0,
-            }),
-        ids,
-      }}
+      value={contextValue}
     >
       <LayoutGroup inherit={false} id={useId()}>
         {children}
@@ -287,8 +300,9 @@ function WindowDimensions({
 }
 
 function OnScrollOnce({ onScroll }: { onScroll: () => void }) {
-  useDomEvent(useRef(window), 'scroll', onScroll)
-  useDomEvent(useRef(window), 'wheel', onScroll)
+  const windowRef = useRef(window)
+  useDomEvent(windowRef, 'scroll', onScroll)
+  useDomEvent(windowRef, 'wheel', onScroll)
 
   return null
 }
@@ -303,23 +317,19 @@ function PopupModal({
   onClose: () => void
 }) {
   const elementRef = useRef<HTMLDivElement | null>(null)
-  if (typeof window !== 'undefined' && !elementRef.current) {
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
     const element = document.createElement('div')
     element.setAttribute('galeria-popup', '1')
+    document.body.appendChild(element)
+    elementRef.current = element
 
-    if (element && document.body) {
-      document.body.appendChild(element)
-      elementRef.current = element
-    }
-  }
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(function cleanup() {
     return () => {
-      if (document.body && elementRef.current) {
-        document.body.removeChild(elementRef.current)
-        elementRef.current = null
+      if (document.body.contains(element)) {
+        document.body.removeChild(element)
       }
+      elementRef.current = null
     }
   }, [])
 

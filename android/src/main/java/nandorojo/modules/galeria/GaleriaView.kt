@@ -48,7 +48,7 @@ fun convertToPhotos(ids: Array<String>): List<Photo> {
 
 @Keep
 class GaleriaView(context: Context) : ViewGroup(context) {
-    private lateinit var viewer: ImageViewerBuilder
+    private var viewer: ImageViewerBuilder? = null
     lateinit var urls: Array<String>
     val onIndexChange by EventDispatcher()
     val onViewerOpen by EventDispatcher()
@@ -120,7 +120,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                     }
                 )
                 if (edgeToEdge) {
-                    viewer.setViewerFactory(object : ImageViewerDialogFragment.Factory() {
+                    viewer?.setViewerFactory(object : ImageViewerDialogFragment.Factory() {
                         override fun build() = EdgeToEdgeImageViewerDialogFragment(
                             theme.toAppearanceLightSystemBars()
                         )
@@ -128,23 +128,22 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                 }
                 childView.setOnClickListener {
                     setupConfig()
-                    if (!disableHiddenOriginalImage) {
-                        val parsedBgColor = imageBackgroundColor?.let {
-                            try { Color.parseColor(it) } catch (_: IllegalArgumentException) { null }
-                        }
-                        viewer.setViewerCallback(CustomViewerCallback(
-                            childView as ImageView,
-                            imageBackgroundColor = parsedBgColor,
-                            onIndexChange = { index ->
-                                onIndexChange(mapOf("currentIndex" to index))
-                            },
-                            onDismiss = {
-                                onViewerDismiss(emptyMap<String, Any>())
-                            }
-                        ))
+                    val parsedBgColor = imageBackgroundColor?.let {
+                        try { Color.parseColor(it) } catch (_: IllegalArgumentException) { null }
                     }
+                    viewer?.setViewerCallback(CustomViewerCallback(
+                        childView as ImageView,
+                        imageBackgroundColor = parsedBgColor,
+                        disableHiddenOriginalImage = disableHiddenOriginalImage,
+                        onIndexChange = { index ->
+                            onIndexChange(mapOf("currentIndex" to index))
+                        },
+                        onDismiss = {
+                            onViewerDismiss(emptyMap<String, Any>())
+                        }
+                    ))
 
-                    viewer.show()
+                    viewer?.show()
                     onViewerOpen(mapOf("currentIndex" to initialIndex))
                 }
             } else if (childView is ViewGroup) {
@@ -193,6 +192,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         isSetup = false
+        viewer = null
         clearImageViewListeners(this)
     }
 
@@ -213,22 +213,27 @@ class GaleriaView(context: Context) : ViewGroup(context) {
 class CustomViewerCallback(
     childView: ImageView,
     private val imageBackgroundColor: Int? = null,
+    private val disableHiddenOriginalImage: Boolean = false,
     private val onIndexChange: (Int) -> Unit,
     private val onDismiss: () -> Unit = {}
 ) : ViewerCallback {
     private val childViewRef = WeakReference(childView)
 
     override fun onInit(viewHolder: RecyclerView.ViewHolder, position: Int) {
-        childViewRef.get()?.animate()?.alpha(0f)?.setDuration(180)?.start()
+        if (!disableHiddenOriginalImage) {
+            childViewRef.get()?.animate()?.alpha(0f)?.setDuration(180)?.start()
+        }
         if (imageBackgroundColor != null) {
             viewHolder.itemView.findViewById<ImageView>(R.id.imageView)?.setBackgroundColor(imageBackgroundColor)
         }
     }
 
     override fun onRelease(viewHolder: RecyclerView.ViewHolder, view: View) {
-        Handler(Looper.getMainLooper()).postDelayed({
-            childViewRef.get()?.alpha = 1f
-        }, 230)
+        if (!disableHiddenOriginalImage) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                childViewRef.get()?.alpha = 1f
+            }, 230)
+        }
         onDismiss()
         // Clear Glide memory cache to free loaded viewer images
         Handler(Looper.getMainLooper()).post {

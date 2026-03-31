@@ -194,8 +194,9 @@ extension UIImageView {
         placeholderRoot.viewerRootView = viewerView
 
         let optionsDismissCallback = viewerView.onDismiss
-        viewerView.onDismiss = { [weak navView] in
+        viewerView.onDismiss = { [weak navView, weak viewerView] in
             optionsDismissCallback?()
+            viewerView?.onDismiss = nil  // Break retain chain
             navView?.removeFromSuperview()
             currentNavigationView = nil
         }

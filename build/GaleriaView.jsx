@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useId, forwardRef, useImperativeHandle, useRef, useEffect, useContext, isValidElement, cloneElement, } from 'react';
+import { useState, useCallback, useId, useMemo, forwardRef, useImperativeHandle, useRef, useEffect, useContext, isValidElement, cloneElement, } from 'react';
 import { createPortal } from 'react-dom';
 import { useWindowDimensions } from 'react-native'; // TODO: remove this
 import { LayoutGroup, motion, useDomEvent } from 'framer-motion';
@@ -63,9 +63,16 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
         dark: '#ffffff',
     }[theme];
     const [wasOpen, setWasOpen] = useState(false);
-    if (isOpen && !wasOpen) {
-        setWasOpen(true);
-    }
+    useEffect(() => {
+        if (isOpen && !wasOpen) {
+            setWasOpen(true);
+        }
+        else if (!isOpen && wasOpen) {
+            const timer = setTimeout(() => setWasOpen(false), 500);
+            return () => clearTimeout(timer);
+        }
+        return undefined;
+    }, [isOpen, wasOpen]);
     return (<>
       <motion.div style={{ zIndex: index + (wasOpen ? 1000 : 0), ...style }} 
     // faster than onClick
@@ -148,34 +155,39 @@ const Root = forwardRef(function Root({ children, urls, theme = 'dark', ids, ima
             setViewerCurrentIndex(currentIndex);
         }
     }, []);
-    return (<GaleriaContext.Provider value={{
-            hideBlurOverlay: false,
-            hidePageIndicators: false,
-            closeIconName: undefined,
-            showOverlayAfterOpen,
-            showPageIndicator,
-            disableCache: false,
-            setOpen,
-            urls,
-            theme,
-            imageBackgroundColor,
-            viewerVisible,
-            viewerCurrentIndex,
-            setViewerVisible: handleSetViewerVisible,
-            setViewerCurrentIndex,
-            ...(openState.open
-                ? {
-                    open: true,
-                    src: openState.src,
-                    initialIndex: openState.initialIndex,
-                }
-                : {
-                    open: false,
-                    src: '',
-                    initialIndex: 0,
-                }),
-            ids,
-        }}>
+    const contextValue = useMemo(() => ({
+        hideBlurOverlay: false,
+        hidePageIndicators: false,
+        closeIconName: undefined,
+        showOverlayAfterOpen,
+        showPageIndicator,
+        disableCache: false,
+        setOpen,
+        urls,
+        theme,
+        imageBackgroundColor,
+        viewerVisible,
+        viewerCurrentIndex,
+        setViewerVisible: handleSetViewerVisible,
+        setViewerCurrentIndex,
+        ...(openState.open
+            ? {
+                open: true,
+                src: openState.src,
+                initialIndex: openState.initialIndex,
+            }
+            : {
+                open: false,
+                src: '',
+                initialIndex: 0,
+            }),
+        ids,
+    }), [
+        showOverlayAfterOpen, showPageIndicator, setOpen, urls, theme,
+        imageBackgroundColor, viewerVisible, viewerCurrentIndex,
+        handleSetViewerVisible, setViewerCurrentIndex, openState, ids,
+    ]);
+    return (<GaleriaContext.Provider value={contextValue}>
       <LayoutGroup inherit={false} id={useId()}>
         {children}
       </LayoutGroup>
@@ -186,27 +198,25 @@ function WindowDimensions({ children, }) {
     return children(dimensions);
 }
 function OnScrollOnce({ onScroll }) {
-    useDomEvent(useRef(window), 'scroll', onScroll);
-    useDomEvent(useRef(window), 'wheel', onScroll);
+    const windowRef = useRef(window);
+    useDomEvent(windowRef, 'scroll', onScroll);
+    useDomEvent(windowRef, 'wheel', onScroll);
     return null;
 }
 function PopupModal({ visible, children, onClose, }) {
     const elementRef = useRef(null);
-    if (typeof window !== 'undefined' && !elementRef.current) {
+    useEffect(() => {
+        if (typeof window === 'undefined')
+            return;
         const element = document.createElement('div');
         element.setAttribute('galeria-popup', '1');
-        if (element && document.body) {
-            document.body.appendChild(element);
-            elementRef.current = element;
-        }
-    }
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(function cleanup() {
+        document.body.appendChild(element);
+        elementRef.current = element;
         return () => {
-            if (document.body && elementRef.current) {
-                document.body.removeChild(elementRef.current);
-                elementRef.current = null;
+            if (document.body.contains(element)) {
+                document.body.removeChild(element);
             }
+            elementRef.current = null;
         };
     }, []);
     if (!visible)
