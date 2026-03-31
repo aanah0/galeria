@@ -1,4 +1,7 @@
 import UIKit
+#if canImport(SDWebImage)
+import SDWebImage
+#endif
 
 class ImageViewerRootView: UIView, RootViewType {
     let transition = MatchTransition()
@@ -112,6 +115,12 @@ class ImageViewerRootView: UIView, RootViewType {
         onRightNavBarTapped = nil
         sourceImage = nil
         transition.verticalDismissGestureRecognizer.view?.removeGestureRecognizer(transition.verticalDismissGestureRecognizer)
+
+        #if canImport(SDWebImage)
+        if disableCache {
+            SDImageCache.shared.clearMemory()
+        }
+        #endif
     }
 
     init(

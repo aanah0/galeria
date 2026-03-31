@@ -71,11 +71,15 @@ private final class URLSessionImageLoadTask: ImageLoadTask {
 #if canImport(SDWebImage)
 struct SDWebImageLoader: ImageLoader {
     func loadImage(_ url: URL, placeholder: UIImage?, imageView: UIImageView, disableCache: Bool, completion: @escaping (UIImage?) -> Void) -> ImageLoadTask {
-        let options: SDWebImageOptions = disableCache ? [.refreshCached, .fromLoaderOnly] : []
+        let options: SDWebImageOptions = disableCache ? [.fromLoaderOnly] : []
+        let context: [SDWebImageContextOption: Any]? = disableCache
+            ? [.storeCacheType: SDImageCacheType.none.rawValue]
+            : nil
         imageView.sd_setImage(
             with: url,
             placeholderImage: placeholder,
             options: options,
+            context: context,
             progress: nil) {(img, err, type, url) in
                 DispatchQueue.main.async {
                     completion(img)
