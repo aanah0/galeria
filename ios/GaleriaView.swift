@@ -59,6 +59,13 @@ class GaleriaView: ExpoView {
       super.insertReactSubview(subview, at: atIndex)
       setupImageView()
     }
+
+    override func removeReactSubview(_ subview: UIView!) {
+      childImageView?.gestureRecognizers?.removeAll()
+      childImageView = nil
+      unregisterFromRegistry()
+      super.removeReactSubview(subview)
+    }
   #endif
 
   #if RCT_NEW_ARCH_ENABLED
@@ -150,8 +157,8 @@ class GaleriaView: ExpoView {
     {
       let rightNavItemOption = ImageViewerOption.rightNavItemIcon(
         rightIconImage,
-        onTap: { index in
-          self.onPressRightNavItemIcon(["index": index])
+        onTap: { [weak self] index in
+          self?.onPressRightNavItemIcon(["index": index])
         })
       options.append(rightNavItemOption)
     }

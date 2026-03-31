@@ -1,6 +1,6 @@
 import { requireNativeView } from 'expo'
 
-import { useCallback, useContext, useState } from 'react'
+import { useCallback, useContext, useMemo, useState } from 'react'
 import { Image, StyleSheet } from 'react-native'
 import type { SFSymbol } from 'sf-symbols-typescript'
 import { GaleriaContext } from './context'
@@ -60,26 +60,31 @@ const Galeria = Object.assign(
       }
     }, [])
 
+    const contextValue = useMemo(() => ({
+      closeIconName,
+      urls,
+      theme,
+      initialIndex: 0,
+      open: false as const,
+      src: '',
+      setOpen: noop,
+      ids,
+      hideBlurOverlay,
+      hidePageIndicators,
+      imageBackgroundColor,
+      viewerVisible,
+      viewerCurrentIndex,
+      setViewerVisible: handleSetViewerVisible,
+      setViewerCurrentIndex,
+    }), [
+      closeIconName, urls, theme, ids,
+      hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
+      viewerVisible, viewerCurrentIndex,
+      handleSetViewerVisible, setViewerCurrentIndex,
+    ])
+
     return (
-      <GaleriaContext.Provider
-        value={{
-          closeIconName,
-          urls,
-          theme,
-          initialIndex: 0,
-          open: false,
-          src: '',
-          setOpen: noop,
-          ids,
-          hideBlurOverlay,
-          hidePageIndicators,
-          imageBackgroundColor,
-          viewerVisible,
-          viewerCurrentIndex,
-          setViewerVisible: handleSetViewerVisible,
-          setViewerCurrentIndex,
-        }}
-      >
+      <GaleriaContext.Provider value={contextValue}>
         {children}
       </GaleriaContext.Provider>
     )

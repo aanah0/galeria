@@ -1,6 +1,6 @@
 import UIKit
 
-private var currentNavigationView: NavigationView?
+private weak var currentNavigationView: NavigationView?
 
 extension UIImageView {
 
@@ -204,7 +204,7 @@ extension UIView {
 class ImageViewerPlaceholderView: UIView, MatchTransitionDelegate {
     weak var sourceImageView: UIImageView?
     weak var galeriaView: GaleriaView?
-    var viewerRootView: ImageViewerRootView?
+    weak var viewerRootView: ImageViewerRootView?
 
     init(sourceImageView: UIImageView, galeriaView: GaleriaView?) {
         self.sourceImageView = sourceImageView

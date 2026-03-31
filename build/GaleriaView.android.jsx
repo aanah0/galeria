@@ -1,5 +1,5 @@
 import { requireNativeView } from 'expo';
-import { useCallback, useContext, useState } from 'react';
+import { useCallback, useContext, useMemo, useState } from 'react';
 import { Image, StyleSheet } from 'react-native';
 import { controlEdgeToEdgeValues, isEdgeToEdge, } from 'react-native-is-edge-to-edge';
 import { GaleriaContext } from './context';
@@ -16,23 +16,28 @@ const Galeria = Object.assign(function Galeria({ children, urls, theme = 'dark',
             setViewerCurrentIndex(currentIndex);
         }
     }, []);
-    return (<GaleriaContext.Provider value={{
-            hideBlurOverlay: false,
-            hidePageIndicators: false,
-            closeIconName: undefined,
-            urls,
-            theme,
-            imageBackgroundColor,
-            initialIndex: 0,
-            open: false,
-            src: '',
-            setOpen: noop,
-            ids,
-            viewerVisible,
-            viewerCurrentIndex,
-            setViewerVisible: handleSetViewerVisible,
-            setViewerCurrentIndex,
-        }}>
+    const contextValue = useMemo(() => ({
+        hideBlurOverlay: false,
+        hidePageIndicators: false,
+        closeIconName: undefined,
+        urls,
+        theme,
+        imageBackgroundColor,
+        initialIndex: 0,
+        open: false,
+        src: '',
+        setOpen: noop,
+        ids,
+        viewerVisible,
+        viewerCurrentIndex,
+        setViewerVisible: handleSetViewerVisible,
+        setViewerCurrentIndex,
+    }), [
+        urls, theme, imageBackgroundColor, ids,
+        viewerVisible, viewerCurrentIndex,
+        handleSetViewerVisible, setViewerCurrentIndex,
+    ]);
+    return (<GaleriaContext.Provider value={contextValue}>
         {children}
       </GaleriaContext.Provider>);
 }, {

@@ -190,6 +190,8 @@ public class MatchTransition: InteractiveTransition {
         self.sourceViewSnapshot = nil
         self.overlayView = nil
         self.foregroundContainerView = nil
+        self.matchedSourceView = nil
+        self.matchedDestinationView = nil
     }
 
     func targetDidChange() {

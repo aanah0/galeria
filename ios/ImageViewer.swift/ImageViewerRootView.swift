@@ -85,6 +85,20 @@ class ImageViewerRootView: UIView, RootViewType {
 
     func didDisappear(animated: Bool) {
         onDismiss?()
+        cleanup()
+    }
+
+    private func cleanup() {
+        pageViewController.dataSource = nil
+        pageViewController.delegate = nil
+        pageViewController.setViewControllers([], direction: .forward, animated: false)
+        initialViewController = nil
+        onDismiss = nil
+        onIndexChange = nil
+        onOpen = nil
+        onRightNavBarTapped = nil
+        sourceImage = nil
+        transition.verticalDismissGestureRecognizer.view?.removeGestureRecognizer(transition.verticalDismissGestureRecognizer)
     }
 
     init(

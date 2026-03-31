@@ -1,5 +1,5 @@
 import { requireNativeView } from 'expo';
-import { useCallback, useContext, useState } from 'react';
+import { useCallback, useContext, useMemo, useState } from 'react';
 import { Image, StyleSheet } from 'react-native';
 import { GaleriaContext } from './context';
 const NativeImage = requireNativeView('Galeria');
@@ -14,23 +14,29 @@ const Galeria = Object.assign(function Galeria({ children, closeIconName, urls, 
             setViewerCurrentIndex(currentIndex);
         }
     }, []);
-    return (<GaleriaContext.Provider value={{
-            closeIconName,
-            urls,
-            theme,
-            initialIndex: 0,
-            open: false,
-            src: '',
-            setOpen: noop,
-            ids,
-            hideBlurOverlay,
-            hidePageIndicators,
-            imageBackgroundColor,
-            viewerVisible,
-            viewerCurrentIndex,
-            setViewerVisible: handleSetViewerVisible,
-            setViewerCurrentIndex,
-        }}>
+    const contextValue = useMemo(() => ({
+        closeIconName,
+        urls,
+        theme,
+        initialIndex: 0,
+        open: false,
+        src: '',
+        setOpen: noop,
+        ids,
+        hideBlurOverlay,
+        hidePageIndicators,
+        imageBackgroundColor,
+        viewerVisible,
+        viewerCurrentIndex,
+        setViewerVisible: handleSetViewerVisible,
+        setViewerCurrentIndex,
+    }), [
+        closeIconName, urls, theme, ids,
+        hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
+        viewerVisible, viewerCurrentIndex,
+        handleSetViewerVisible, setViewerCurrentIndex,
+    ]);
+    return (<GaleriaContext.Provider value={contextValue}>
         {children}
       </GaleriaContext.Provider>);
 }, {

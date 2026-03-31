@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
+import com.github.iielse.imageviewer.ImageViewerDialogFragment
 
 class GaleriaOverlayView(context: Context) : FrameLayout(context) {
 
@@ -21,6 +22,7 @@ class GaleriaOverlayView(context: Context) : FrameLayout(context) {
 
     private var addedToDialog = false
     private var originalParent: ViewGroup? = null
+    private val handler = Handler(Looper.getMainLooper())
 
     var visible: Boolean = false
         set(value) {
@@ -53,7 +55,7 @@ class GaleriaOverlayView(context: Context) : FrameLayout(context) {
 
     private fun showOverlay() {
         val activity = getActivity(context) as? FragmentActivity ?: return
-        Handler(Looper.getMainLooper()).post {
+        handler.post {
             tryAttachToDialog(activity)
         }
     }
@@ -62,6 +64,7 @@ class GaleriaOverlayView(context: Context) : FrameLayout(context) {
         if (addedToDialog) return
         val fragment = activity.supportFragmentManager.fragments
             .filterIsInstance<DialogFragment>()
+            .filter { it is ImageViewerDialogFragment || it is EdgeToEdgeImageViewerDialogFragment }
             .lastOrNull { it.dialog?.isShowing == true }
 
         val dialogContentView = fragment?.dialog?.window?.decorView
@@ -77,12 +80,18 @@ class GaleriaOverlayView(context: Context) : FrameLayout(context) {
             addedToDialog = true
         } else {
             // Dialog not ready yet, retry
-            Handler(Looper.getMainLooper()).postDelayed({
+            handler.postDelayed({
                 if (visible && !addedToDialog) {
                     tryAttachToDialog(activity)
                 }
             }, 50)
         }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        handler.removeCallbacksAndMessages(null)
+        hideOverlay()
     }
 
     private fun hideOverlay() {
