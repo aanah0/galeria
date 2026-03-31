@@ -239,8 +239,8 @@ open class NavigationView: UIView, RootViewType {
     }
 
     private func didUpdateTransition(_ context: NavigationTransitionContext) {
-        state.transitions.removeAll { $0.context.isCompleted }
-        if state.transitions.isEmpty {
+        if state.transitions.allSatisfy({ $0.context.isCompleted }) {
+            // all transition completed, cleanup
             let nextAction = state.nextAction
             self.state = .init(baseViews: views, transitions: [], nextAction: nil)
             if let (navigationAction, animated) = nextAction {
