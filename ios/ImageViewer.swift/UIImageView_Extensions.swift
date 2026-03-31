@@ -1,6 +1,15 @@
 import UIKit
 
-private weak var currentNavigationView: NavigationView?
+weak var currentNavigationView: NavigationView?
+
+func dismissCurrentViewer(animation: String) {
+    guard let navView = currentNavigationView else { return }
+    if animation == "slideToBottom",
+       let viewerRoot = navView.topView as? ImageViewerRootView {
+        viewerRoot.dismissTransitionOverride = SlideToBottomTransition()
+    }
+    navView.popView(animated: true)
+}
 
 extension UIImageView {
 

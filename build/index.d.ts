@@ -1,3 +1,3 @@
 export { default as Galeria } from './GaleriaView';
-export { GaleriaViewProps, GaleriaOverlayProps, GaleriaOverlayRenderProps } from './Galeria.types';
+export { GaleriaViewProps, GaleriaOverlayProps, GaleriaOverlayRenderProps, GaleriaRef, GaleriaDismissAnimation } from './Galeria.types';
 //# sourceMappingURL=index.d.ts.map

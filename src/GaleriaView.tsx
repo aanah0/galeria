@@ -3,7 +3,8 @@ import {
   useState,
   useCallback,
   useId,
-
+  forwardRef,
+  useImperativeHandle,
   useRef,
   useEffect,
   useContext,
@@ -13,7 +14,7 @@ import {
 import { createPortal } from 'react-dom'
 import { useWindowDimensions } from 'react-native' // TODO: remove this
 
-import { GaleriaOverlayProps, GaleriaViewProps } from './Galeria.types'
+import { GaleriaOverlayProps, GaleriaRef, GaleriaViewProps } from './Galeria.types'
 import { LayoutGroup, motion, useDomEvent } from 'framer-motion'
 import { GaleriaContext } from './context'
 
@@ -199,15 +200,17 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
   )
 }
 
-function Root({
+const Root = forwardRef<GaleriaRef, {
+  children: React.ReactNode
+} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator'>>>(function Root({
   children,
   urls,
   theme = 'dark',
   ids,
   imageBackgroundColor,
-}: {
-  children: React.ReactNode
-} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor'>>) {
+  showOverlayAfterOpen = false,
+  showPageIndicator = true,
+}, ref) {
   const [openState, setOpen] = useState({
     open: false,
   } as
@@ -222,6 +225,13 @@ function Root({
   const [viewerVisible, setViewerVisible] = useState(false)
   const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0)
 
+  useImperativeHandle(ref, () => ({
+    close: () => {
+      // Web: just close the popup
+      setViewerVisible(false)
+    },
+  }), [])
+
   const handleSetViewerVisible = useCallback((visible: boolean, currentIndex?: number) => {
     setViewerVisible(visible)
     if (currentIndex !== undefined) {
@@ -235,6 +245,8 @@ function Root({
         hideBlurOverlay: false,
         hidePageIndicators: false,
         closeIconName: undefined,
+        showOverlayAfterOpen,
+        showPageIndicator,
         setOpen,
         urls,
         theme,
@@ -262,7 +274,7 @@ function Root({
       </LayoutGroup>
     </GaleriaContext.Provider>
   )
-}
+})
 
 function WindowDimensions({
   children,

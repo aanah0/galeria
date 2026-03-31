@@ -15,6 +15,7 @@ class ImageViewerRootView: UIView, RootViewType {
     var hideBlurOverlay: Bool = false
     var hidePageIndicators: Bool = false
     var imageBackgroundColor: UIColor?
+    var dismissTransitionOverride: Transition?
 
     private var pageViewController: UIPageViewController!
     private(set) lazy var backgroundView: UIView = {
@@ -295,6 +296,9 @@ class ImageViewerRootView: UIView, RootViewType {
 
 extension ImageViewerRootView: TransitionProvider {
     func transitionFor(presenting: Bool, otherView: UIView) -> Transition? {
+        if !presenting, let override = dismissTransitionOverride {
+            return override
+        }
         return transition
     }
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useCallback, useId, useRef, useEffect, useContext, isValidElement, cloneElement, } from 'react';
+import { useState, useCallback, useId, forwardRef, useImperativeHandle, useRef, useEffect, useContext, isValidElement, cloneElement, } from 'react';
 import { createPortal } from 'react-dom';
 import { useWindowDimensions } from 'react-native'; // TODO: remove this
 import { LayoutGroup, motion, useDomEvent } from 'framer-motion';
@@ -130,12 +130,18 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
       </PopupModal>
     </>);
 }
-function Root({ children, urls, theme = 'dark', ids, imageBackgroundColor, }) {
+const Root = forwardRef(function Root({ children, urls, theme = 'dark', ids, imageBackgroundColor, showOverlayAfterOpen = false, showPageIndicator = true, }, ref) {
     const [openState, setOpen] = useState({
         open: false,
     });
     const [viewerVisible, setViewerVisible] = useState(false);
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0);
+    useImperativeHandle(ref, () => ({
+        close: () => {
+            // Web: just close the popup
+            setViewerVisible(false);
+        },
+    }), []);
     const handleSetViewerVisible = useCallback((visible, currentIndex) => {
         setViewerVisible(visible);
         if (currentIndex !== undefined) {
@@ -146,6 +152,8 @@ function Root({ children, urls, theme = 'dark', ids, imageBackgroundColor, }) {
             hideBlurOverlay: false,
             hidePageIndicators: false,
             closeIconName: undefined,
+            showOverlayAfterOpen,
+            showPageIndicator,
             setOpen,
             urls,
             theme,
@@ -171,7 +179,7 @@ function Root({ children, urls, theme = 'dark', ids, imageBackgroundColor, }) {
         {children}
       </LayoutGroup>
     </GaleriaContext.Provider>);
-}
+});
 function WindowDimensions({ children, }) {
     const dimensions = useWindowDimensions();
     return children(dimensions);

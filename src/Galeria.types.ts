@@ -21,6 +21,12 @@ export type GaleriaViewerOpenEvent =
 export type GaleriaViewerDismissEvent =
   NativeSyntheticEvent<{}>
 
+export type GaleriaDismissAnimation = 'default' | 'slideToBottom'
+
+export type GaleriaRef = {
+  close: (animation?: GaleriaDismissAnimation) => void
+}
+
 export type GaleriaOverlayRenderProps = {
   currentIndex: number
   total: number

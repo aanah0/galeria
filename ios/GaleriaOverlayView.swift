@@ -14,6 +14,8 @@ class GaleriaOverlayView: ExpoView {
     private var isContainerAdded = false
     private var overlayObserver: NSObjectProtocol?
 
+    var showAfterOpen: Bool = false
+
     var visible: Bool = false {
         didSet {
             if visible {
@@ -66,6 +68,12 @@ class GaleriaOverlayView: ExpoView {
             guard let visible = notification.userInfo?["visible"] as? Bool else { return }
             UIView.animate(withDuration: 0.235) {
                 self?.containerView.alpha = visible ? 1.0 : 0.0
+            }
+        }
+
+        if showAfterOpen {
+            UIView.animate(withDuration: 0.235) {
+                self.containerView.alpha = 1.0
             }
         }
     }

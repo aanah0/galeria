@@ -1,16 +1,19 @@
-import { requireNativeView } from 'expo'
+import { requireNativeModule, requireNativeView } from 'expo'
 
-import { useCallback, useContext, useMemo, useState } from 'react'
+import { forwardRef, useCallback, useContext, useImperativeHandle, useMemo, useState } from 'react'
 import { Image, StyleSheet } from 'react-native'
 import type { SFSymbol } from 'sf-symbols-typescript'
 import { GaleriaContext } from './context'
 import {
   GaleriaIndexChangedEvent,
   GaleriaOverlayProps,
+  GaleriaRef,
   GaleriaViewerDismissEvent,
   GaleriaViewerOpenEvent,
   GaleriaViewProps,
 } from './Galeria.types'
+
+const GaleriaModule = requireNativeModule('Galeria')
 
 const NativeImage = requireNativeView<
   GaleriaViewProps & {
@@ -28,6 +31,7 @@ const NativeImage = requireNativeView<
 
 const NativeOverlayView = requireNativeView<{
   visible: boolean
+  showAfterOpen?: boolean
   children?: React.ReactNode
   style?: any
   pointerEvents?: string
@@ -35,8 +39,11 @@ const NativeOverlayView = requireNativeView<{
 
 const noop = () => {}
 
-const Galeria = Object.assign(
-  function Galeria({
+const GaleriaInner = forwardRef<GaleriaRef, {
+  children: React.ReactNode
+} & Partial<
+  Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'closeIconName' | 'hideBlurOverlay' | 'hidePageIndicators' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator'>
+>>(function Galeria({
     children,
     closeIconName,
     urls,
@@ -45,13 +52,17 @@ const Galeria = Object.assign(
     hideBlurOverlay = false,
     hidePageIndicators = false,
     imageBackgroundColor,
-  }: {
-    children: React.ReactNode
-  } & Partial<
-    Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'closeIconName' | 'hideBlurOverlay' | 'hidePageIndicators' | 'imageBackgroundColor'>
-  >) {
+    showOverlayAfterOpen = false,
+    showPageIndicator = true,
+  }, ref) {
     const [viewerVisible, setViewerVisible] = useState(false)
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0)
+
+    useImperativeHandle(ref, () => ({
+      close: (animation) => {
+        GaleriaModule.close(animation ?? 'default')
+      },
+    }), [])
 
     const handleSetViewerVisible = useCallback((visible: boolean, currentIndex?: number) => {
       setViewerVisible(visible)
@@ -72,6 +83,8 @@ const Galeria = Object.assign(
       hideBlurOverlay,
       hidePageIndicators,
       imageBackgroundColor,
+      showOverlayAfterOpen,
+      showPageIndicator,
       viewerVisible,
       viewerCurrentIndex,
       setViewerVisible: handleSetViewerVisible,
@@ -79,6 +92,7 @@ const Galeria = Object.assign(
     }), [
       closeIconName, urls, theme, ids,
       hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
+      showOverlayAfterOpen, showPageIndicator,
       viewerVisible, viewerCurrentIndex,
       handleSetViewerVisible, setViewerCurrentIndex,
     ])
@@ -88,12 +102,16 @@ const Galeria = Object.assign(
         {children}
       </GaleriaContext.Provider>
     )
-  },
+  })
+
+const Galeria = Object.assign(
+  GaleriaInner,
   {
     Image({ onIndexChange: userOnIndexChange, ...restProps }: GaleriaViewProps) {
       const {
         theme, urls, initialIndex, closeIconName,
         hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
+        showPageIndicator,
         setViewerVisible, setViewerCurrentIndex,
       } = useContext(GaleriaContext)
 
@@ -118,7 +136,7 @@ const Galeria = Object.assign(
           closeIconName={closeIconName}
           theme={theme}
           hideBlurOverlay={restProps.hideBlurOverlay ?? hideBlurOverlay}
-          hidePageIndicators={restProps.hidePageIndicators ?? hidePageIndicators}
+          hidePageIndicators={restProps.hidePageIndicators ?? (!(showPageIndicator ?? true) || hidePageIndicators)}
           imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor}
           urls={urls?.map((url) => {
             if (typeof url === 'string') {
@@ -133,7 +151,7 @@ const Galeria = Object.assign(
       )
     },
     Overlay({ children }: GaleriaOverlayProps) {
-      const { viewerVisible, viewerCurrentIndex, urls } = useContext(GaleriaContext)
+      const { viewerVisible, viewerCurrentIndex, urls, showOverlayAfterOpen } = useContext(GaleriaContext)
 
       const resolvedUrls = (urls ?? []).map((url) => {
         if (typeof url === 'string') return url
@@ -141,7 +159,7 @@ const Galeria = Object.assign(
       })
 
       return (
-        <NativeOverlayView visible={viewerVisible} style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <NativeOverlayView visible={viewerVisible} showAfterOpen={showOverlayAfterOpen} style={StyleSheet.absoluteFill} pointerEvents="box-none">
           {children({
             currentIndex: viewerCurrentIndex,
             total: resolvedUrls.length,

@@ -1,11 +1,34 @@
-import { GaleriaOverlayProps, GaleriaViewProps } from './Galeria.types';
-import { GaleriaContext } from './context';
+import { GaleriaOverlayProps, GaleriaRef, GaleriaViewProps } from './Galeria.types';
 declare function Image({ __web, index, children, style, dynamicAspectRatio, }: GaleriaViewProps): import("react").JSX.Element;
-declare function Root({ children, urls, theme, ids, imageBackgroundColor, }: {
-    children: React.ReactNode;
-} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor'>>): import("react").JSX.Element;
 declare function Overlay({ children }: GaleriaOverlayProps): import("react").ReactPortal | null;
-declare const Galeria: typeof Root & {
+declare const Galeria: import("react").ForwardRefExoticComponent<{
+    children: React.ReactNode;
+} & Partial<Pick<{
+    initialIndex: number;
+    open: boolean;
+    urls: undefined | (string | import("react-native").ImageSourcePropType)[];
+    closeIconName: undefined | import("sf-symbols-typescript").SFSymbol;
+    ids: string[] | undefined;
+    setOpen: (info: {
+        open: true;
+        src: string;
+        initialIndex: number;
+        id?: string;
+    } | {
+        open: false;
+    }) => void;
+    theme: "dark" | "light";
+    src: string;
+    hideBlurOverlay: boolean;
+    hidePageIndicators: boolean;
+    imageBackgroundColor: string | undefined;
+    showOverlayAfterOpen: boolean;
+    showPageIndicator: boolean;
+    viewerVisible: boolean;
+    viewerCurrentIndex: number;
+    setViewerVisible: (_visible: boolean, _currentIndex?: number) => void;
+    setViewerCurrentIndex: (_index: number) => void;
+}, "theme" | "ids" | "urls" | "imageBackgroundColor" | "showOverlayAfterOpen" | "showPageIndicator">> & import("react").RefAttributes<GaleriaRef>> & {
     Image: typeof Image;
     Overlay: typeof Overlay;
     Popup: React.FC<{

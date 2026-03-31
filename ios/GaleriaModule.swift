@@ -42,6 +42,12 @@ public class GaleriaModule: Module {
   public func definition() -> ModuleDefinition {
     Name("Galeria")
 
+    AsyncFunction("close") { (animation: String?) in
+      DispatchQueue.main.async {
+        dismissCurrentViewer(animation: animation ?? "default")
+      }
+    }
+
     View(GaleriaView.self) {
       Events("onIndexChange", "onViewerOpen", "onViewerDismiss")
 

@@ -1,6 +1,6 @@
-import { requireNativeView } from 'expo'
+import { requireNativeModule, requireNativeView } from 'expo'
 
-import { useCallback, useContext, useMemo, useState } from 'react'
+import { forwardRef, useCallback, useContext, useImperativeHandle, useMemo, useState } from 'react'
 import { Image, StyleSheet } from 'react-native'
 import {
   controlEdgeToEdgeValues,
@@ -10,10 +10,13 @@ import { GaleriaContext } from './context'
 import {
   GaleriaIndexChangedEvent,
   GaleriaOverlayProps,
+  GaleriaRef,
   GaleriaViewerDismissEvent,
   GaleriaViewerOpenEvent,
   GaleriaViewProps,
 } from './Galeria.types'
+
+const GaleriaModule = requireNativeModule('Galeria')
 
 const EDGE_TO_EDGE = isEdgeToEdge()
 
@@ -38,18 +41,25 @@ const NativeOverlayView = requireNativeView<{
 
 const noop = () => {}
 
-const Galeria = Object.assign(
-  function Galeria({
+const GaleriaInner = forwardRef<GaleriaRef, {
+  children: React.ReactNode
+} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator'>>>(function Galeria({
     children,
     urls,
     theme = 'dark',
     ids,
     imageBackgroundColor,
-  }: {
-    children: React.ReactNode
-  } & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor'>>) {
+    showOverlayAfterOpen = false,
+    showPageIndicator = true,
+  }, ref) {
     const [viewerVisible, setViewerVisible] = useState(false)
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0)
+
+    useImperativeHandle(ref, () => ({
+      close: (animation) => {
+        GaleriaModule.close(animation ?? 'default')
+      },
+    }), [])
 
     const handleSetViewerVisible = useCallback((visible: boolean, currentIndex?: number) => {
       setViewerVisible(visible)
@@ -65,6 +75,8 @@ const Galeria = Object.assign(
       urls,
       theme,
       imageBackgroundColor,
+      showOverlayAfterOpen,
+      showPageIndicator,
       initialIndex: 0,
       open: false as const,
       src: '',
@@ -75,7 +87,7 @@ const Galeria = Object.assign(
       setViewerVisible: handleSetViewerVisible,
       setViewerCurrentIndex,
     }), [
-      urls, theme, imageBackgroundColor, ids,
+      urls, theme, imageBackgroundColor, showOverlayAfterOpen, showPageIndicator, ids,
       viewerVisible, viewerCurrentIndex,
       handleSetViewerVisible, setViewerCurrentIndex,
     ])
@@ -85,7 +97,10 @@ const Galeria = Object.assign(
         {children}
       </GaleriaContext.Provider>
     )
-  },
+  })
+
+const Galeria = Object.assign(
+  GaleriaInner,
   {
     Image({ edgeToEdge, onIndexChange: userOnIndexChange, ...restProps }: GaleriaViewProps) {
       const { theme, urls, imageBackgroundColor, setViewerVisible, setViewerCurrentIndex } =

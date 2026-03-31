@@ -24,6 +24,8 @@ export declare const GaleriaContext: import("react").Context<{
     hideBlurOverlay: boolean;
     hidePageIndicators: boolean;
     imageBackgroundColor: string | undefined;
+    showOverlayAfterOpen: boolean;
+    showPageIndicator: boolean;
     viewerVisible: boolean;
     viewerCurrentIndex: number;
     setViewerVisible: (_visible: boolean, _currentIndex?: number) => void;

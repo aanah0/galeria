@@ -1,15 +1,21 @@
-import { requireNativeView } from 'expo';
-import { useCallback, useContext, useMemo, useState } from 'react';
+import { requireNativeModule, requireNativeView } from 'expo';
+import { forwardRef, useCallback, useContext, useImperativeHandle, useMemo, useState } from 'react';
 import { Image, StyleSheet } from 'react-native';
 import { controlEdgeToEdgeValues, isEdgeToEdge, } from 'react-native-is-edge-to-edge';
 import { GaleriaContext } from './context';
+const GaleriaModule = requireNativeModule('Galeria');
 const EDGE_TO_EDGE = isEdgeToEdge();
 const NativeImage = requireNativeView('Galeria');
 const NativeOverlayView = requireNativeView('GaleriaOverlay');
 const noop = () => { };
-const Galeria = Object.assign(function Galeria({ children, urls, theme = 'dark', ids, imageBackgroundColor, }) {
+const GaleriaInner = forwardRef(function Galeria({ children, urls, theme = 'dark', ids, imageBackgroundColor, showOverlayAfterOpen = false, showPageIndicator = true, }, ref) {
     const [viewerVisible, setViewerVisible] = useState(false);
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0);
+    useImperativeHandle(ref, () => ({
+        close: (animation) => {
+            GaleriaModule.close(animation ?? 'default');
+        },
+    }), []);
     const handleSetViewerVisible = useCallback((visible, currentIndex) => {
         setViewerVisible(visible);
         if (currentIndex !== undefined) {
@@ -23,6 +29,8 @@ const Galeria = Object.assign(function Galeria({ children, urls, theme = 'dark',
         urls,
         theme,
         imageBackgroundColor,
+        showOverlayAfterOpen,
+        showPageIndicator,
         initialIndex: 0,
         open: false,
         src: '',
@@ -33,14 +41,15 @@ const Galeria = Object.assign(function Galeria({ children, urls, theme = 'dark',
         setViewerVisible: handleSetViewerVisible,
         setViewerCurrentIndex,
     }), [
-        urls, theme, imageBackgroundColor, ids,
+        urls, theme, imageBackgroundColor, showOverlayAfterOpen, showPageIndicator, ids,
         viewerVisible, viewerCurrentIndex,
         handleSetViewerVisible, setViewerCurrentIndex,
     ]);
     return (<GaleriaContext.Provider value={contextValue}>
         {children}
       </GaleriaContext.Provider>);
-}, {
+});
+const Galeria = Object.assign(GaleriaInner, {
     Image({ edgeToEdge, onIndexChange: userOnIndexChange, ...restProps }) {
         const { theme, urls, imageBackgroundColor, setViewerVisible, setViewerCurrentIndex } = useContext(GaleriaContext);
         if (__DEV__) {

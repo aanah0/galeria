@@ -8,6 +8,10 @@ public class GaleriaOverlayModule: Module {
             Prop("visible") { (view, visible: Bool?) in
                 view.visible = visible ?? false
             }
+
+            Prop("showAfterOpen") { (view, show: Bool?) in
+                view.showAfterOpen = show ?? false
+            }
         }
     }
 }
