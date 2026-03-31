@@ -26,6 +26,7 @@ export declare const GaleriaContext: import("react").Context<{
     imageBackgroundColor: string | undefined;
     showOverlayAfterOpen: boolean;
     showPageIndicator: boolean;
+    disableCache: boolean;
     viewerVisible: boolean;
     viewerCurrentIndex: number;
     setViewerVisible: (_visible: boolean, _currentIndex?: number) => void;

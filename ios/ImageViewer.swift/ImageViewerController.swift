@@ -10,6 +10,7 @@ class ImageViewerController: UIViewController {
 
     var initialPlaceholder: UIImage?
     var imageBackgroundColor: UIColor?
+    var disableCache: Bool = false
 
     private var top: NSLayoutConstraint!
     private var leading: NSLayoutConstraint!
@@ -79,7 +80,7 @@ class ImageViewerController: UIViewController {
                 imageView.image = effectivePlaceholder
                 imageView.contentMode = .scaleAspectFit
             }
-            imageLoader.loadImage(url, placeholder: effectivePlaceholder, imageView: imageView) { [weak self] _ in
+            imageLoader.loadImage(url, placeholder: effectivePlaceholder, imageView: imageView, disableCache: disableCache) { [weak self] _ in
                 DispatchQueue.main.async {
                     self?.layout()
                 }

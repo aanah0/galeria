@@ -15,6 +15,7 @@ class ImageViewerRootView: UIView, RootViewType {
     var hideBlurOverlay: Bool = false
     var hidePageIndicators: Bool = false
     var imageBackgroundColor: UIColor?
+    var disableCache: Bool = false
     var dismissTransitionOverride: Transition?
 
     private var pageViewController: UIPageViewController!
@@ -119,6 +120,9 @@ class ImageViewerRootView: UIView, RootViewType {
             if case .hidePageIndicators(let hide) = option {
                 self.hidePageIndicators = hide
             }
+            if case .disableCache(let disable) = option {
+                self.disableCache = disable
+            }
         }
 
         super.init(frame: .zero)
@@ -154,6 +158,7 @@ class ImageViewerRootView: UIView, RootViewType {
                 imageLoader: imageLoader
             )
             self.initialViewController = initialVC
+            initialVC.disableCache = disableCache
 
             if let sourceImage = self.sourceImage {
                 initialVC.initialPlaceholder = sourceImage
@@ -231,6 +236,8 @@ class ImageViewerRootView: UIView, RootViewType {
                 self.hidePageIndicators = hide
             case .imageBackgroundColor(let color):
                 self.imageBackgroundColor = color
+            case .disableCache(let disable):
+                self.disableCache = disable
             }
         }
     }
@@ -349,6 +356,7 @@ extension ImageViewerRootView: UIPageViewControllerDataSource {
             imageLoader: imageLoader
         )
         newVC.imageBackgroundColor = imageBackgroundColor
+        newVC.disableCache = disableCache
         newVC.view.gestureRecognizers?.removeAll(where: { $0 is UIPanGestureRecognizer })
         return newVC
     }
@@ -370,6 +378,7 @@ extension ImageViewerRootView: UIPageViewControllerDataSource {
             imageLoader: imageLoader
         )
         newVC.imageBackgroundColor = imageBackgroundColor
+        newVC.disableCache = disableCache
         newVC.view.gestureRecognizers?.removeAll(where: { $0 is UIPanGestureRecognizer })
         return newVC
     }

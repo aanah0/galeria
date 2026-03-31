@@ -43,6 +43,10 @@ export interface GaleriaViewProps {
      * Accepts any valid color string (e.g. '#FF0000', 'rgba(0,0,0,0.9)', 'red').
      */
     imageBackgroundColor?: string;
+    /**
+     * Disable image caching in the viewer. When true, images are always fetched fresh.
+     */
+    disableCache?: boolean;
 }
 export {};
 //# sourceMappingURL=Galeria.types.d.ts.map

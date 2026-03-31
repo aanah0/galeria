@@ -8,20 +8,21 @@ const EDGE_TO_EDGE = isEdgeToEdge();
 const NativeImage = requireNativeView('Galeria');
 const NativeOverlayView = requireNativeView('GaleriaOverlay');
 const noop = () => { };
-const GaleriaInner = forwardRef(function Galeria({ children, urls, theme = 'dark', ids, imageBackgroundColor, showOverlayAfterOpen = false, showPageIndicator = true, }, ref) {
+const GaleriaInner = forwardRef(function Galeria({ children, urls, theme = 'dark', ids, imageBackgroundColor, showOverlayAfterOpen = false, showPageIndicator = true, disableCache = false, }, ref) {
     const [viewerVisible, setViewerVisible] = useState(false);
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0);
-    useImperativeHandle(ref, () => ({
-        close: (animation) => {
-            GaleriaModule.close(animation ?? 'default');
-        },
-    }), []);
     const handleSetViewerVisible = useCallback((visible, currentIndex) => {
         setViewerVisible(visible);
         if (currentIndex !== undefined) {
             setViewerCurrentIndex(currentIndex);
         }
     }, []);
+    useImperativeHandle(ref, () => ({
+        close: (animation) => {
+            handleSetViewerVisible(false);
+            GaleriaModule.close(animation ?? 'default');
+        },
+    }), [handleSetViewerVisible]);
     const contextValue = useMemo(() => ({
         hideBlurOverlay: false,
         hidePageIndicators: false,
@@ -31,6 +32,7 @@ const GaleriaInner = forwardRef(function Galeria({ children, urls, theme = 'dark
         imageBackgroundColor,
         showOverlayAfterOpen,
         showPageIndicator,
+        disableCache,
         initialIndex: 0,
         open: false,
         src: '',
@@ -41,7 +43,7 @@ const GaleriaInner = forwardRef(function Galeria({ children, urls, theme = 'dark
         setViewerVisible: handleSetViewerVisible,
         setViewerCurrentIndex,
     }), [
-        urls, theme, imageBackgroundColor, showOverlayAfterOpen, showPageIndicator, ids,
+        urls, theme, imageBackgroundColor, showOverlayAfterOpen, showPageIndicator, disableCache, ids,
         viewerVisible, viewerCurrentIndex,
         handleSetViewerVisible, setViewerCurrentIndex,
     ]);
@@ -51,7 +53,7 @@ const GaleriaInner = forwardRef(function Galeria({ children, urls, theme = 'dark
 });
 const Galeria = Object.assign(GaleriaInner, {
     Image({ edgeToEdge, onIndexChange: userOnIndexChange, ...restProps }) {
-        const { theme, urls, imageBackgroundColor, setViewerVisible, setViewerCurrentIndex } = useContext(GaleriaContext);
+        const { theme, urls, imageBackgroundColor, disableCache, setViewerVisible, setViewerCurrentIndex } = useContext(GaleriaContext);
         if (__DEV__) {
             controlEdgeToEdgeValues({ edgeToEdge });
         }
@@ -65,7 +67,7 @@ const Galeria = Object.assign(GaleriaInner, {
         const handleViewerDismiss = useCallback((_event) => {
             setViewerVisible(false);
         }, [setViewerVisible]);
-        return (<NativeImage onIndexChange={handleIndexChange} onViewerOpen={handleViewerOpen} onViewerDismiss={handleViewerDismiss} edgeToEdge={EDGE_TO_EDGE || (edgeToEdge ?? false)} theme={theme} imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor} urls={urls?.map((url) => {
+        return (<NativeImage onIndexChange={handleIndexChange} onViewerOpen={handleViewerOpen} onViewerDismiss={handleViewerDismiss} edgeToEdge={EDGE_TO_EDGE || (edgeToEdge ?? false)} theme={theme} imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor} disableCache={restProps.disableCache ?? disableCache} urls={urls?.map((url) => {
                 if (typeof url === 'string') {
                     return url;
                 }

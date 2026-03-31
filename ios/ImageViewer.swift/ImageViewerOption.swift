@@ -12,4 +12,5 @@ public enum ImageViewerOption {
     case hideBlurOverlay(Bool)
     case hidePageIndicators(Bool)
     case imageBackgroundColor(UIColor)
+    case disableCache(Bool)
 }

@@ -4,6 +4,13 @@ weak var currentNavigationView: NavigationView?
 
 func dismissCurrentViewer(animation: String) {
     guard let navView = currentNavigationView else { return }
+
+    NotificationCenter.default.post(
+        name: .galeriaOverlayToggle,
+        object: nil,
+        userInfo: ["visible": false]
+    )
+
     if animation == "slideToBottom",
        let viewerRoot = navView.topView as? ImageViewerRootView {
         viewerRoot.dismissTransitionOverride = SlideToBottomTransition()

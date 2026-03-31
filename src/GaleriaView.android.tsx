@@ -43,7 +43,7 @@ const noop = () => {}
 
 const GaleriaInner = forwardRef<GaleriaRef, {
   children: React.ReactNode
-} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator'>>>(function Galeria({
+} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator' | 'disableCache'>>>(function Galeria({
     children,
     urls,
     theme = 'dark',
@@ -51,15 +51,10 @@ const GaleriaInner = forwardRef<GaleriaRef, {
     imageBackgroundColor,
     showOverlayAfterOpen = false,
     showPageIndicator = true,
+    disableCache = false,
   }, ref) {
     const [viewerVisible, setViewerVisible] = useState(false)
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0)
-
-    useImperativeHandle(ref, () => ({
-      close: (animation) => {
-        GaleriaModule.close(animation ?? 'default')
-      },
-    }), [])
 
     const handleSetViewerVisible = useCallback((visible: boolean, currentIndex?: number) => {
       setViewerVisible(visible)
@@ -67,6 +62,13 @@ const GaleriaInner = forwardRef<GaleriaRef, {
         setViewerCurrentIndex(currentIndex)
       }
     }, [])
+
+    useImperativeHandle(ref, () => ({
+      close: (animation) => {
+        handleSetViewerVisible(false)
+        GaleriaModule.close(animation ?? 'default')
+      },
+    }), [handleSetViewerVisible])
 
     const contextValue = useMemo(() => ({
       hideBlurOverlay: false,
@@ -77,6 +79,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
       imageBackgroundColor,
       showOverlayAfterOpen,
       showPageIndicator,
+      disableCache,
       initialIndex: 0,
       open: false as const,
       src: '',
@@ -87,7 +90,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
       setViewerVisible: handleSetViewerVisible,
       setViewerCurrentIndex,
     }), [
-      urls, theme, imageBackgroundColor, showOverlayAfterOpen, showPageIndicator, ids,
+      urls, theme, imageBackgroundColor, showOverlayAfterOpen, showPageIndicator, disableCache, ids,
       viewerVisible, viewerCurrentIndex,
       handleSetViewerVisible, setViewerCurrentIndex,
     ])
@@ -103,7 +106,7 @@ const Galeria = Object.assign(
   GaleriaInner,
   {
     Image({ edgeToEdge, onIndexChange: userOnIndexChange, ...restProps }: GaleriaViewProps) {
-      const { theme, urls, imageBackgroundColor, setViewerVisible, setViewerCurrentIndex } =
+      const { theme, urls, imageBackgroundColor, disableCache, setViewerVisible, setViewerCurrentIndex } =
         useContext(GaleriaContext)
 
       if (__DEV__) {
@@ -131,6 +134,7 @@ const Galeria = Object.assign(
           edgeToEdge={EDGE_TO_EDGE || (edgeToEdge ?? false)}
           theme={theme}
           imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor}
+          disableCache={restProps.disableCache ?? disableCache}
           urls={urls?.map((url) => {
             if (typeof url === 'string') {
               return url

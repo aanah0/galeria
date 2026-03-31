@@ -86,6 +86,7 @@ class GaleriaView: ExpoView {
   var rightNavItemIconName: String?
   var hideBlurOverlay: Bool = false
   var hidePageIndicators: Bool = false
+  var disableCache: Bool = false
   var imageBackgroundColor: UIColor?
   let onPressRightNavItemIcon = EventDispatcher()
   let onIndexChange = EventDispatcher()
@@ -181,6 +182,7 @@ class GaleriaView: ExpoView {
 
     options.append(.hideBlurOverlay(hideBlurOverlay))
     options.append(.hidePageIndicators(hidePageIndicators))
+    options.append(.disableCache(disableCache))
 
     if let bgColor = imageBackgroundColor {
       options.append(.imageBackgroundColor(bgColor))

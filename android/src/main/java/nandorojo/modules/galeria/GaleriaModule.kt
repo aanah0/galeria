@@ -56,6 +56,9 @@ class GaleriaModule : Module() {
             Prop("imageBackgroundColor") { view: GaleriaView, imageBackgroundColor: String? ->
                 view.imageBackgroundColor = imageBackgroundColor
             }
+            Prop("disableCache") { view: GaleriaView, disableCache: Boolean ->
+                view.disableCache = disableCache
+            }
         }
     }
 }

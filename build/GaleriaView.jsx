@@ -154,6 +154,7 @@ const Root = forwardRef(function Root({ children, urls, theme = 'dark', ids, ima
             closeIconName: undefined,
             showOverlayAfterOpen,
             showPageIndicator,
+            disableCache: false,
             setOpen,
             urls,
             theme,

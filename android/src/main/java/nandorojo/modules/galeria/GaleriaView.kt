@@ -60,6 +60,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     var transitionOffsetY: Int? = null
     var transitionOffsetX: Int? = 0
     var imageBackgroundColor: String? = null
+    var disableCache: Boolean = false
     private var isSetup = false
     val viewModel: ImageViewerActionViewModel by lazy {
         ViewModelProvider(getViewModelOwner(context)).get(ImageViewerActionViewModel::class.java)
@@ -111,7 +112,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                 viewer = ImageViewerBuilder(
                     context = imageViewContext,
                     dataProvider = SimpleDataProvider(clickedData, photos),
-                    imageLoader = SimpleImageLoader(),
+                    imageLoader = SimpleImageLoader(disableCache = disableCache),
                     transformer = object : Transformer {
                         override fun getView(key: Long): ImageView {
                             return fakeStartView(parentView)
@@ -262,13 +263,17 @@ enum class Theme(val value: String) {
     }
 }
 
-class SimpleImageLoader : ImageLoader {
+class SimpleImageLoader(private val disableCache: Boolean = false) : ImageLoader {
     override fun load(view: ImageView, data: Photo, viewHolder: RecyclerView.ViewHolder) {
-//        Todo: Since React-Native's Image is using Fresco as the image loader, we may need to handle it differently.
         val it = data.extra() as? String
-        Glide.with(view).load(it)
+        var request = Glide.with(view).load(it)
             .placeholder(view.drawable)
-            .into(view)
+        if (disableCache) {
+            request = request
+                .skipMemoryCache(true)
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
+        }
+        request.into(view)
     }
 }
 

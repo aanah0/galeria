@@ -81,6 +81,10 @@ public class GaleriaModule: Module {
         view.hidePageIndicators = hidePageIndicators ?? false
       }
 
+      Prop("disableCache") { (view, disableCache: Bool?) in
+        view.disableCache = disableCache ?? false
+      }
+
       Prop("imageBackgroundColor") { (view, imageBackgroundColor: String?) in
         if let colorString = imageBackgroundColor {
           view.imageBackgroundColor = parseColor(colorString)

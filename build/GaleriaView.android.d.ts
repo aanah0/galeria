@@ -22,11 +22,12 @@ declare const Galeria: import("react").ForwardRefExoticComponent<{
     imageBackgroundColor: string | undefined;
     showOverlayAfterOpen: boolean;
     showPageIndicator: boolean;
+    disableCache: boolean;
     viewerVisible: boolean;
     viewerCurrentIndex: number;
     setViewerVisible: (_visible: boolean, _currentIndex?: number) => void;
     setViewerCurrentIndex: (_index: number) => void;
-}, "theme" | "ids" | "urls" | "imageBackgroundColor" | "showOverlayAfterOpen" | "showPageIndicator">> & import("react").RefAttributes<GaleriaRef>> & {
+}, "theme" | "ids" | "urls" | "imageBackgroundColor" | "showOverlayAfterOpen" | "showPageIndicator" | "disableCache">> & import("react").RefAttributes<GaleriaRef>> & {
     Image({ edgeToEdge, onIndexChange: userOnIndexChange, ...restProps }: GaleriaViewProps): import("react").JSX.Element;
     Overlay({ children }: GaleriaOverlayProps): import("react").JSX.Element;
     Popup: React.FC<{

@@ -42,7 +42,7 @@ const noop = () => {}
 const GaleriaInner = forwardRef<GaleriaRef, {
   children: React.ReactNode
 } & Partial<
-  Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'closeIconName' | 'hideBlurOverlay' | 'hidePageIndicators' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator'>
+  Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'closeIconName' | 'hideBlurOverlay' | 'hidePageIndicators' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator' | 'disableCache'>
 >>(function Galeria({
     children,
     closeIconName,
@@ -54,15 +54,10 @@ const GaleriaInner = forwardRef<GaleriaRef, {
     imageBackgroundColor,
     showOverlayAfterOpen = false,
     showPageIndicator = true,
+    disableCache = false,
   }, ref) {
     const [viewerVisible, setViewerVisible] = useState(false)
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0)
-
-    useImperativeHandle(ref, () => ({
-      close: (animation) => {
-        GaleriaModule.close(animation ?? 'default')
-      },
-    }), [])
 
     const handleSetViewerVisible = useCallback((visible: boolean, currentIndex?: number) => {
       setViewerVisible(visible)
@@ -70,6 +65,13 @@ const GaleriaInner = forwardRef<GaleriaRef, {
         setViewerCurrentIndex(currentIndex)
       }
     }, [])
+
+    useImperativeHandle(ref, () => ({
+      close: (animation) => {
+        handleSetViewerVisible(false)
+        GaleriaModule.close(animation ?? 'default')
+      },
+    }), [handleSetViewerVisible])
 
     const contextValue = useMemo(() => ({
       closeIconName,
@@ -85,6 +87,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
       imageBackgroundColor,
       showOverlayAfterOpen,
       showPageIndicator,
+      disableCache,
       viewerVisible,
       viewerCurrentIndex,
       setViewerVisible: handleSetViewerVisible,
@@ -92,7 +95,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
     }), [
       closeIconName, urls, theme, ids,
       hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
-      showOverlayAfterOpen, showPageIndicator,
+      showOverlayAfterOpen, showPageIndicator, disableCache,
       viewerVisible, viewerCurrentIndex,
       handleSetViewerVisible, setViewerCurrentIndex,
     ])
@@ -111,7 +114,7 @@ const Galeria = Object.assign(
       const {
         theme, urls, initialIndex, closeIconName,
         hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
-        showPageIndicator,
+        showPageIndicator, disableCache,
         setViewerVisible, setViewerCurrentIndex,
       } = useContext(GaleriaContext)
 
@@ -138,6 +141,7 @@ const Galeria = Object.assign(
           hideBlurOverlay={restProps.hideBlurOverlay ?? hideBlurOverlay}
           hidePageIndicators={restProps.hidePageIndicators ?? (!(showPageIndicator ?? true) || hidePageIndicators)}
           imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor}
+          disableCache={restProps.disableCache ?? disableCache}
           urls={urls?.map((url) => {
             if (typeof url === 'string') {
               return url
