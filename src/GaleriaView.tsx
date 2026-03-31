@@ -3,7 +3,7 @@ import {
   useState,
   useCallback,
   useId,
-  ComponentProps,
+
   useRef,
   useEffect,
   useContext,
@@ -14,8 +14,6 @@ import { createPortal } from 'react-dom'
 import { useWindowDimensions } from 'react-native' // TODO: remove this
 
 import { GaleriaOverlayProps, GaleriaViewProps } from './Galeria.types'
-import type Native from './GaleriaView.ios'
-
 import { LayoutGroup, motion, useDomEvent } from 'framer-motion'
 import { GaleriaContext } from './context'
 
@@ -207,7 +205,9 @@ function Root({
   theme = 'dark',
   ids,
   imageBackgroundColor,
-}: ComponentProps<typeof Native>) {
+}: {
+  children: React.ReactNode
+} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor'>>) {
   const [openState, setOpen] = useState({
     open: false,
   } as
@@ -360,10 +360,10 @@ function Overlay({ children }: GaleriaOverlayProps) {
   )
 }
 
-const Galeria: typeof Native = Object.assign(Root, {
+const Galeria = Object.assign(Root, {
   Image,
   Overlay,
-  Popup: () => null,
+  Popup: (() => null) as React.FC<{ disableTransition?: 'web' }>,
 })
 
 export default Galeria

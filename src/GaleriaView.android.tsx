@@ -32,6 +32,8 @@ const NativeImage = requireNativeView<
 const NativeOverlayView = requireNativeView<{
   visible: boolean
   children?: React.ReactNode
+  style?: any
+  pointerEvents?: string
 }>('GaleriaOverlay')
 
 const noop = () => {}
