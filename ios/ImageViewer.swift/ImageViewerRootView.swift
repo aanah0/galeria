@@ -1,4 +1,7 @@
 import UIKit
+#if canImport(SDWebImage)
+import SDWebImage
+#endif
 
 class ImageViewerRootView: UIView, RootViewType {
     let transition = MatchTransition()
@@ -9,10 +12,14 @@ class ImageViewerRootView: UIView, RootViewType {
     var theme: ImageViewerTheme = .dark
     var options: [ImageViewerOption] = []
     var onIndexChange: ((Int) -> Void)?
+    var onOpen: ((Int) -> Void)?
     var onDismiss: (() -> Void)?
     var sourceImage: UIImage?
     var hideBlurOverlay: Bool = false
     var hidePageIndicators: Bool = false
+    var imageBackgroundColor: UIColor?
+    var disableCache: Bool = false
+    var dismissTransitionOverride: Transition?
 
     private var pageViewController: UIPageViewController!
     private(set) lazy var backgroundView: UIView = {
@@ -34,6 +41,7 @@ class ImageViewerRootView: UIView, RootViewType {
 
     private(set) var currentIndex: Int = 0
     private var initialViewController: ImageViewerController?
+    private var hasCleanedUp = false
 
     var currentImageView: UIImageView? {
         if let vc = pageViewController?.viewControllers?.first as? ImageViewerController {
@@ -67,6 +75,12 @@ class ImageViewerRootView: UIView, RootViewType {
         UIView.animate(withDuration: 0.25) {
             self.navBar.alpha = 1.0
         }
+        NotificationCenter.default.post(
+            name: .galeriaOverlayToggle,
+            object: nil,
+            userInfo: ["visible": true, "animated": true]
+        )
+        onOpen?(currentIndex)
     }
 
     func willDisappear(animated: Bool) {
@@ -77,6 +91,36 @@ class ImageViewerRootView: UIView, RootViewType {
 
     func didDisappear(animated: Bool) {
         onDismiss?()
+        cleanup()
+    }
+
+    private func cleanup() {
+        guard !hasCleanedUp else { return }
+        hasCleanedUp = true
+
+        pageViewController.viewControllers?.compactMap { $0 as? ImageViewerController }.forEach {
+            $0.releaseResources()
+        }
+        pageViewController.children.compactMap { $0 as? ImageViewerController }.forEach {
+            $0.releaseResources()
+        }
+
+        pageViewController.dataSource = nil
+        pageViewController.delegate = nil
+        initialViewController = nil
+        imageDatasource = nil
+        onDismiss = nil
+        onIndexChange = nil
+        onOpen = nil
+        onRightNavBarTapped = nil
+        sourceImage = nil
+        transition.verticalDismissGestureRecognizer.view?.removeGestureRecognizer(transition.verticalDismissGestureRecognizer)
+
+        #if canImport(SDWebImage)
+        if disableCache {
+            SDImageCache.shared.clearMemory()
+        }
+        #endif
     }
 
     init(
@@ -97,16 +141,24 @@ class ImageViewerRootView: UIView, RootViewType {
             if case .hidePageIndicators(let hide) = option {
                 self.hidePageIndicators = hide
             }
+            if case .disableCache(let disable) = option {
+                self.disableCache = disable
+            }
         }
 
         super.init(frame: .zero)
         setupViews()
         applyOptions()
+        applyImageBackgroundColor()
         setupGestures()
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        cleanup()
     }
 
     private func setupViews() {
@@ -131,11 +183,12 @@ class ImageViewerRootView: UIView, RootViewType {
                 imageLoader: imageLoader
             )
             self.initialViewController = initialVC
-            
+            initialVC.disableCache = disableCache
+
             if let sourceImage = self.sourceImage {
                 initialVC.initialPlaceholder = sourceImage
             }
-            
+
             initialVC.view.gestureRecognizers?.removeAll(where: { $0 is UIPanGestureRecognizer })
             pageViewController.setViewControllers([initialVC], direction: .forward, animated: false)
 
@@ -196,6 +249,8 @@ class ImageViewerRootView: UIView, RootViewType {
                 onRightNavBarTapped = onTap
             case .onIndexChange(let callback):
                 self.onIndexChange = callback
+            case .onOpen(let callback):
+                self.onOpen = callback
             case .onDismiss(let callback):
                 self.onDismiss = callback
             case .contentMode:
@@ -204,8 +259,17 @@ class ImageViewerRootView: UIView, RootViewType {
                 self.hideBlurOverlay = hide
             case .hidePageIndicators(let hide):
                 self.hidePageIndicators = hide
+            case .imageBackgroundColor(let color):
+                self.imageBackgroundColor = color
+            case .disableCache(let disable):
+                self.disableCache = disable
             }
         }
+    }
+
+    private func applyImageBackgroundColor() {
+        guard let color = imageBackgroundColor else { return }
+        initialViewController?.imageBackgroundColor = color
     }
 
     private func setupGestures() {
@@ -246,9 +310,15 @@ class ImageViewerRootView: UIView, RootViewType {
 
     @objc private func didSingleTap() {
         let currentAlpha = navBar.alpha
+        let newAlpha: CGFloat = currentAlpha > 0.5 ? 0.0 : 1.0
         UIView.animate(withDuration: 0.235) {
-            self.navBar.alpha = currentAlpha > 0.5 ? 0.0 : 1.0
+            self.navBar.alpha = newAlpha
         }
+        NotificationCenter.default.post(
+            name: .galeriaOverlayToggle,
+            object: nil,
+            userInfo: ["visible": newAlpha > 0.5]
+        )
     }
 
     @objc private func didTapRightNavItem() {
@@ -258,6 +328,9 @@ class ImageViewerRootView: UIView, RootViewType {
 
 extension ImageViewerRootView: TransitionProvider {
     func transitionFor(presenting: Bool, otherView: UIView) -> Transition? {
+        if !presenting, let override = dismissTransitionOverride {
+            return override
+        }
         return transition
     }
 }
@@ -307,6 +380,8 @@ extension ImageViewerRootView: UIPageViewControllerDataSource {
             imageItem: datasource.imageItem(at: newIndex),
             imageLoader: imageLoader
         )
+        newVC.imageBackgroundColor = imageBackgroundColor
+        newVC.disableCache = disableCache
         newVC.view.gestureRecognizers?.removeAll(where: { $0 is UIPanGestureRecognizer })
         return newVC
     }
@@ -327,6 +402,8 @@ extension ImageViewerRootView: UIPageViewControllerDataSource {
             imageItem: datasource.imageItem(at: newIndex),
             imageLoader: imageLoader
         )
+        newVC.imageBackgroundColor = imageBackgroundColor
+        newVC.disableCache = disableCache
         newVC.view.gestureRecognizers?.removeAll(where: { $0 is UIPanGestureRecognizer })
         return newVC
     }
@@ -340,6 +417,10 @@ extension ImageViewerRootView: UIPageViewControllerDataSource {
     func presentationIndex(for pageViewController: UIPageViewController) -> Int {
         return currentIndex
     }
+}
+
+extension Notification.Name {
+    static let galeriaOverlayToggle = Notification.Name("galeriaOverlayToggle")
 }
 
 extension ImageViewerRootView: UIPageViewControllerDelegate {

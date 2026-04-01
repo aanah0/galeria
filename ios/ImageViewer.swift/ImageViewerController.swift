@@ -6,9 +6,11 @@ class ImageViewerController: UIViewController {
     let imageLoader: ImageLoader
 
     var index: Int = 0
-    var imageItem: ImageItem!
-    
+    private var imageItem: ImageItem?
+
     var initialPlaceholder: UIImage?
+    var imageBackgroundColor: UIColor?
+    var disableCache: Bool = false
 
     private var top: NSLayoutConstraint!
     private var leading: NSLayoutConstraint!
@@ -18,6 +20,8 @@ class ImageViewerController: UIViewController {
     private(set) var scrollView: UIScrollView!
 
     private var maxZoomScale: CGFloat = 1.0
+    private var imageLoadTask: ImageLoadTask?
+    private var hasReleasedResources = false
 
     init(
         index: Int,
@@ -64,6 +68,12 @@ class ImageViewerController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        if let bgColor = imageBackgroundColor {
+            imageView.backgroundColor = bgColor
+        }
+
+        guard let imageItem else { return }
+
         switch imageItem {
         case .image(let img):
             imageView.image = img ?? initialPlaceholder
@@ -74,21 +84,43 @@ class ImageViewerController: UIViewController {
                 imageView.image = effectivePlaceholder
                 imageView.contentMode = .scaleAspectFit
             }
-            imageLoader.loadImage(url, placeholder: effectivePlaceholder, imageView: imageView) { [weak self] _ in
+            imageLoadTask = imageLoader.loadImage(url, placeholder: effectivePlaceholder, imageView: imageView, disableCache: disableCache) { [weak self] _ in
                 DispatchQueue.main.async {
                     self?.layout()
                 }
             }
-        default:
-            break
         }
 
         addGestureRecognizers()
     }
 
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+
+        if view.window == nil {
+            releaseResources()
+        }
+    }
+
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         layout()
+    }
+
+    deinit {
+        releaseResources()
+    }
+
+    func releaseResources() {
+        guard !hasReleasedResources else { return }
+        hasReleasedResources = true
+
+        imageLoadTask?.cancel()
+        imageLoadTask = nil
+        scrollView?.delegate = nil
+        imageView.image = nil
+        initialPlaceholder = nil
+        imageItem = nil
     }
 
     private func layout() {
@@ -210,4 +242,3 @@ extension ImageViewerController: UIScrollViewDelegate {
         updateConstraintsForSize(view.bounds.size)
     }
 }
-

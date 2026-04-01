@@ -1,8 +1,11 @@
 'use client'
 import {
   useState,
+  useCallback,
   useId,
-  ComponentProps,
+  useMemo,
+  forwardRef,
+  useImperativeHandle,
   useRef,
   useEffect,
   useContext,
@@ -12,9 +15,7 @@ import {
 import { createPortal } from 'react-dom'
 import { useWindowDimensions } from 'react-native' // TODO: remove this
 
-import { GaleriaViewProps } from './Galeria.types'
-import type Native from './GaleriaView.ios'
-
+import { GaleriaOverlayProps, GaleriaRef, GaleriaViewProps } from './Galeria.types'
 import { LayoutGroup, motion, useDomEvent } from 'framer-motion'
 import { GaleriaContext } from './context'
 
@@ -26,7 +27,7 @@ function Image({
   dynamicAspectRatio = false,
 }: GaleriaViewProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { urls, theme } = useContext(GaleriaContext)
+  const { urls, theme, imageBackgroundColor, setViewerVisible, setViewerCurrentIndex } = useContext(GaleriaContext)
   const url = urls?.[index]
   const [aspectRatio, setAspectRatio] = useState(1)
   const id = useId()
@@ -58,6 +59,8 @@ function Image({
     const imageNode = getFirstImageChild(e.target as Node)
     if (imageNode) {
       setIsOpen(true)
+      setViewerVisible(true, index)
+      setViewerCurrentIndex(index)
       const ratio = getNodeAspectRatio(imageNode)
       setAspectRatio(ratio)
       if (
@@ -80,7 +83,7 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
       }
     }
   }
-  const background = {
+  const background = imageBackgroundColor ?? {
     light: '#ffffff',
     dark: '#000000',
   }[theme]
@@ -90,9 +93,15 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
   }[theme]
   const [wasOpen, setWasOpen] = useState(false)
 
-  if (isOpen && !wasOpen) {
-    setWasOpen(true)
-  }
+  useEffect(() => {
+    if (isOpen && !wasOpen) {
+      setWasOpen(true)
+    } else if (!isOpen && wasOpen) {
+      const timer = setTimeout(() => setWasOpen(false), 500)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [isOpen, wasOpen])
 
   return (
     <>
@@ -109,7 +118,7 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
           : children}
       </motion.div>
 
-      <PopupModal visible={isOpen} onClose={() => setIsOpen(false)}>
+      <PopupModal visible={isOpen} onClose={() => { setIsOpen(false); setViewerVisible(false) }}>
         <WindowDimensions>
           {(dimensions) => {
             // given the image aspect ratio, and the window dimensions, we want to derive the proper height and width
@@ -187,7 +196,10 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
 
         <OnScrollOnce
           onScroll={() => {
-            isOpen && setIsOpen(false)
+            if (isOpen) {
+              setIsOpen(false)
+              setViewerVisible(false)
+            }
           }}
         />
       </PopupModal>
@@ -195,12 +207,17 @@ Or, you might need something like alignItems: 'flex-start' to the parent element
   )
 }
 
-function Root({
+const Root = forwardRef<GaleriaRef, {
+  children: React.ReactNode
+} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator'>>>(function Root({
   children,
   urls,
   theme = 'dark',
   ids,
-}: ComponentProps<typeof Native>) {
+  imageBackgroundColor,
+  showOverlayAfterOpen = false,
+  showPageIndicator = true,
+}, ref) {
   const [openState, setOpen] = useState({
     open: false,
   } as
@@ -212,35 +229,66 @@ function Root({
         src: string
         initialIndex: number
       })
+  const [viewerVisible, setViewerVisible] = useState(false)
+  const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0)
+
+  useImperativeHandle(ref, () => ({
+    close: () => {
+      // Web: just close the popup
+      setViewerVisible(false)
+    },
+  }), [])
+
+  const handleSetViewerVisible = useCallback((visible: boolean, currentIndex?: number) => {
+    setViewerVisible(visible)
+    if (currentIndex !== undefined) {
+      setViewerCurrentIndex(currentIndex)
+    }
+  }, [])
+
+  const contextValue = useMemo(() => ({
+    hideBlurOverlay: false,
+    hidePageIndicators: false,
+    closeIconName: undefined,
+    showOverlayAfterOpen,
+    showPageIndicator,
+    disableCache: false,
+    setOpen,
+    urls,
+    theme,
+    imageBackgroundColor,
+    viewerVisible,
+    viewerCurrentIndex,
+    setViewerVisible: handleSetViewerVisible,
+    setViewerCurrentIndex,
+    ...(openState.open
+      ? {
+          open: true,
+          src: openState.src,
+          initialIndex: openState.initialIndex,
+        }
+      : {
+          open: false,
+          src: '',
+          initialIndex: 0,
+        }),
+    ids,
+  }), [
+    showOverlayAfterOpen, showPageIndicator, setOpen, urls, theme,
+    imageBackgroundColor, viewerVisible, viewerCurrentIndex,
+    handleSetViewerVisible, setViewerCurrentIndex, openState, ids,
+  ])
+
   return (
     <GaleriaContext.Provider
-      value={{
-        hideBlurOverlay: false,
-        hidePageIndicators: false,
-        closeIconName: undefined,
-        setOpen,
-        urls,
-        theme,
-        ...(openState.open
-          ? {
-              open: true,
-              src: openState.src,
-              initialIndex: openState.initialIndex,
-            }
-          : {
-              open: false,
-              src: '',
-              initialIndex: 0,
-            }),
-        ids,
-      }}
+      value={contextValue}
     >
       <LayoutGroup inherit={false} id={useId()}>
         {children}
       </LayoutGroup>
     </GaleriaContext.Provider>
   )
-}
+})
 
 function WindowDimensions({
   children,
@@ -252,8 +300,9 @@ function WindowDimensions({
 }
 
 function OnScrollOnce({ onScroll }: { onScroll: () => void }) {
-  useDomEvent(useRef(window), 'scroll', onScroll)
-  useDomEvent(useRef(window), 'wheel', onScroll)
+  const windowRef = useRef(window)
+  useDomEvent(windowRef, 'scroll', onScroll)
+  useDomEvent(windowRef, 'wheel', onScroll)
 
   return null
 }
@@ -268,23 +317,19 @@ function PopupModal({
   onClose: () => void
 }) {
   const elementRef = useRef<HTMLDivElement | null>(null)
-  if (typeof window !== 'undefined' && !elementRef.current) {
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
     const element = document.createElement('div')
     element.setAttribute('galeria-popup', '1')
+    document.body.appendChild(element)
+    elementRef.current = element
 
-    if (element && document.body) {
-      document.body.appendChild(element)
-      elementRef.current = element
-    }
-  }
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(function cleanup() {
     return () => {
-      if (document.body && elementRef.current) {
-        document.body.removeChild(elementRef.current)
-        elementRef.current = null
+      if (document.body.contains(element)) {
+        document.body.removeChild(element)
       }
+      elementRef.current = null
     }
   }, [])
 
@@ -309,9 +354,39 @@ function PopupModal({
   return elementRef.current ? createPortal(node, elementRef.current) : null
 }
 
-const Galeria: typeof Native = Object.assign(Root, {
+function Overlay({ children }: GaleriaOverlayProps) {
+  const { viewerVisible, viewerCurrentIndex, urls } = useContext(GaleriaContext)
+
+  const resolvedUrls = (urls ?? []).map((url) => {
+    if (typeof url === 'string') return url
+    return String(url)
+  })
+
+  if (!viewerVisible) return null
+
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        pointerEvents: 'none',
+      }}
+    >
+      {children({
+        currentIndex: viewerCurrentIndex,
+        total: resolvedUrls.length,
+        urls: resolvedUrls,
+      })}
+    </div>,
+    document.body,
+  )
+}
+
+const Galeria = Object.assign(Root, {
   Image,
-  Popup: () => null,
+  Overlay,
+  Popup: (() => null) as React.FC<{ disableTransition?: 'web' }>,
 })
 
 export default Galeria

@@ -59,6 +59,13 @@ class GaleriaView: ExpoView {
       super.insertReactSubview(subview, at: atIndex)
       setupImageView()
     }
+
+    override func removeReactSubview(_ subview: UIView!) {
+      childImageView?.gestureRecognizers?.removeAll()
+      childImageView = nil
+      unregisterFromRegistry()
+      super.removeReactSubview(subview)
+    }
   #endif
 
   #if RCT_NEW_ARCH_ENABLED
@@ -79,8 +86,12 @@ class GaleriaView: ExpoView {
   var rightNavItemIconName: String?
   var hideBlurOverlay: Bool = false
   var hidePageIndicators: Bool = false
+  var disableCache: Bool = false
+  var imageBackgroundColor: UIColor?
   let onPressRightNavItemIcon = EventDispatcher()
   let onIndexChange = EventDispatcher()
+  let onViewerOpen = EventDispatcher()
+  let onViewerDismiss = EventDispatcher()
 
   public func setupImageView() {
     let viewerTheme = theme.toImageViewerTheme()
@@ -147,8 +158,8 @@ class GaleriaView: ExpoView {
     {
       let rightNavItemOption = ImageViewerOption.rightNavItemIcon(
         rightIconImage,
-        onTap: { index in
-          self.onPressRightNavItemIcon(["index": index])
+        onTap: { [weak self] index in
+          self?.onPressRightNavItemIcon(["index": index])
         })
       options.append(rightNavItemOption)
     }
@@ -158,13 +169,24 @@ class GaleriaView: ExpoView {
         self?.onIndexChange(["currentIndex": index])
       })
 
-      options.append(
-        .onDismiss { [weak self] in
-            self?.restoreKeyboard()
-        })
+    options.append(
+      .onOpen { [weak self] index in
+        self?.onViewerOpen(["currentIndex": index])
+      })
+
+    options.append(
+      .onDismiss { [weak self] in
+        self?.restoreKeyboard()
+        self?.onViewerDismiss([:])
+      })
 
     options.append(.hideBlurOverlay(hideBlurOverlay))
     options.append(.hidePageIndicators(hidePageIndicators))
+    options.append(.disableCache(disableCache))
+
+    if let bgColor = imageBackgroundColor {
+      options.append(.imageBackgroundColor(bgColor))
+    }
 
     return options
   }

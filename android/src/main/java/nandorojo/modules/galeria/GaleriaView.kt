@@ -28,6 +28,7 @@ import com.github.iielse.imageviewer.core.Transformer
 import com.github.iielse.imageviewer.core.ViewerCallback
 import com.github.iielse.imageviewer.utils.Config
 import expo.modules.kotlin.viewevent.EventDispatcher
+import java.lang.ref.WeakReference
 
 
 class StringPhoto(private val id: Long, private val data: String) : Photo {
@@ -47,15 +48,20 @@ fun convertToPhotos(ids: Array<String>): List<Photo> {
 
 @Keep
 class GaleriaView(context: Context) : ViewGroup(context) {
-    private lateinit var viewer: ImageViewerBuilder
+    private var viewer: ImageViewerBuilder? = null
     lateinit var urls: Array<String>
     val onIndexChange by EventDispatcher()
+    val onViewerOpen by EventDispatcher()
+    val onViewerDismiss by EventDispatcher()
     var theme: Theme = Theme.Dark
     var initialIndex: Int = 0
     var disableHiddenOriginalImage = false
     var edgeToEdge = false
     var transitionOffsetY: Int? = null
     var transitionOffsetX: Int? = 0
+    var imageBackgroundColor: String? = null
+    var disableCache: Boolean = false
+    private var isSetup = false
     val viewModel: ImageViewerActionViewModel by lazy {
         ViewModelProvider(getViewModelOwner(context)).get(ImageViewerActionViewModel::class.java)
     }
@@ -106,7 +112,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                 viewer = ImageViewerBuilder(
                     context = imageViewContext,
                     dataProvider = SimpleDataProvider(clickedData, photos),
-                    imageLoader = SimpleImageLoader(),
+                    imageLoader = SimpleImageLoader(disableCache = disableCache),
                     transformer = object : Transformer {
                         override fun getView(key: Long): ImageView {
                             return fakeStartView(parentView)
@@ -114,7 +120,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                     }
                 )
                 if (edgeToEdge) {
-                    viewer.setViewerFactory(object : ImageViewerDialogFragment.Factory() {
+                    viewer?.setViewerFactory(object : ImageViewerDialogFragment.Factory() {
                         override fun build() = EdgeToEdgeImageViewerDialogFragment(
                             theme.toAppearanceLightSystemBars()
                         )
@@ -122,14 +128,23 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                 }
                 childView.setOnClickListener {
                     setupConfig()
-                    if (!disableHiddenOriginalImage) {
-                        viewer.setViewerCallback(CustomViewerCallback(childView as ImageView) { index ->
-                            onIndexChange(mapOf("currentIndex" to index))
-                        })
+                    val parsedBgColor = imageBackgroundColor?.let {
+                        try { Color.parseColor(it) } catch (_: IllegalArgumentException) { null }
                     }
+                    viewer?.setViewerCallback(CustomViewerCallback(
+                        childView as ImageView,
+                        imageBackgroundColor = parsedBgColor,
+                        disableHiddenOriginalImage = disableHiddenOriginalImage,
+                        onIndexChange = { index ->
+                            onIndexChange(mapOf("currentIndex" to index))
+                        },
+                        onDismiss = {
+                            onViewerDismiss(emptyMap<String, Any>())
+                        }
+                    ))
 
-                    viewer.show()
-
+                    viewer?.show()
+                    onViewerOpen(mapOf("currentIndex" to initialIndex))
                 }
             } else if (childView is ViewGroup) {
                 setupImageViewer(childView)
@@ -168,27 +183,69 @@ class GaleriaView(context: Context) : ViewGroup(context) {
 
 
     override fun onLayout(p0: Boolean, p1: Int, p2: Int, p3: Int, p4: Int) {
-        setupImageViewer(this)
+        if (!isSetup) {
+            isSetup = true
+            setupImageViewer(this)
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        isSetup = false
+        viewer = null
+        clearImageViewListeners(this)
+    }
+
+    private fun clearImageViewListeners(parent: ViewGroup) {
+        for (i in 0 until parent.childCount) {
+            val child = parent.getChildAt(i)
+            if (child is ImageView) {
+                child.setOnClickListener(null)
+            } else if (child is ViewGroup) {
+                clearImageViewListeners(child)
+            }
+        }
     }
 
 
 }
 
-class CustomViewerCallback(private val childView: ImageView, private val onIndexChange: (Int) -> Unit) : ViewerCallback {
-    override fun onInit(viewHolder: RecyclerView.ViewHolder, position: Int) {
-        childView.animate().alpha(0f).setDuration(180).start()
+class CustomViewerCallback(
+    childView: ImageView,
+    private val imageBackgroundColor: Int? = null,
+    private val disableHiddenOriginalImage: Boolean = false,
+    private val onIndexChange: (Int) -> Unit,
+    private val onDismiss: () -> Unit = {}
+) : ViewerCallback {
+    private val childViewRef = WeakReference(childView)
 
+    override fun onInit(viewHolder: RecyclerView.ViewHolder, position: Int) {
+        if (!disableHiddenOriginalImage) {
+            childViewRef.get()?.animate()?.alpha(0f)?.setDuration(180)?.start()
+        }
+        if (imageBackgroundColor != null) {
+            viewHolder.itemView.findViewById<ImageView>(R.id.imageView)?.setBackgroundColor(imageBackgroundColor)
+        }
     }
 
-
     override fun onRelease(viewHolder: RecyclerView.ViewHolder, view: View) {
-        Handler(Looper.getMainLooper()).postDelayed({
-            childView.alpha = 1f
-        }, 230)
+        if (!disableHiddenOriginalImage) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                childViewRef.get()?.alpha = 1f
+            }, 230)
+        }
+        onDismiss()
+        // Clear Glide memory cache to free loaded viewer images
+        Handler(Looper.getMainLooper()).post {
+            try { Glide.get(view.context).clearMemory() } catch (_: Exception) {}
+        }
     }
 
     override fun onPageSelected(position: Int, viewHolder: RecyclerView.ViewHolder) {
         onIndexChange(position)
+        if (imageBackgroundColor != null) {
+            viewHolder.itemView.findViewById<ImageView>(R.id.imageView)?.setBackgroundColor(imageBackgroundColor)
+        }
     }
 }
 
@@ -211,13 +268,17 @@ enum class Theme(val value: String) {
     }
 }
 
-class SimpleImageLoader : ImageLoader {
+class SimpleImageLoader(private val disableCache: Boolean = false) : ImageLoader {
     override fun load(view: ImageView, data: Photo, viewHolder: RecyclerView.ViewHolder) {
-//        Todo: Since React-Native's Image is using Fresco as the image loader, we may need to handle it differently.
         val it = data.extra() as? String
-        Glide.with(view).load(it)
+        var request = Glide.with(view).load(it)
             .placeholder(view.drawable)
-            .into(view)
+        if (disableCache) {
+            request = request
+                .skipMemoryCache(true)
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.NONE)
+        }
+        request.into(view)
     }
 }
 

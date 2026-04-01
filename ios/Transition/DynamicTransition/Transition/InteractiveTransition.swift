@@ -41,8 +41,8 @@ open class InteractiveTransition: NSObject, Transition {
 
     public func animateTransition(context: TransitionContext) {
         let animator = TransitionAnimator(response: response, dampingRatio: dampingRatio)
-        animator.addCompletion { position in
-            self.didCompleteTransitionAnimation(position: position)
+        animator.addCompletion { [weak self] position in
+            self?.didCompleteTransitionAnimation(position: position)
         }
         self.context = context
         self.animator = animator

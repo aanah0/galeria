@@ -1,6 +1,22 @@
 import UIKit
 
-private var currentNavigationView: NavigationView?
+weak var currentNavigationView: NavigationView?
+
+func dismissCurrentViewer(animation: String) {
+    guard let navView = currentNavigationView else { return }
+
+    NotificationCenter.default.post(
+        name: .galeriaOverlayToggle,
+        object: nil,
+        userInfo: ["visible": false]
+    )
+
+    if animation == "slideToBottom",
+       let viewerRoot = navView.topView as? ImageViewerRootView {
+        viewerRoot.dismissTransitionOverride = SlideToBottomTransition()
+    }
+    navView.popView(animated: true)
+}
 
 extension UIImageView {
 
@@ -137,7 +153,9 @@ extension UIImageView {
         _tapRecognizer!.initialIndex = initialIndex
         _tapRecognizer!.options = options
         _tapRecognizer!.from = from
-        addGestureRecognizer(_tapRecognizer!)
+        if _tapRecognizer!.view !== self {
+            addGestureRecognizer(_tapRecognizer!)
+        }
     }
 
     @objc
@@ -178,8 +196,9 @@ extension UIImageView {
         placeholderRoot.viewerRootView = viewerView
 
         let optionsDismissCallback = viewerView.onDismiss
-        viewerView.onDismiss = { [weak navView] in
+        viewerView.onDismiss = { [weak navView, weak viewerView] in
             optionsDismissCallback?()
+            viewerView?.onDismiss = nil  // Break retain chain
             navView?.removeFromSuperview()
             currentNavigationView = nil
         }
@@ -204,7 +223,7 @@ extension UIView {
 class ImageViewerPlaceholderView: UIView, MatchTransitionDelegate {
     weak var sourceImageView: UIImageView?
     weak var galeriaView: GaleriaView?
-    var viewerRootView: ImageViewerRootView?
+    weak var viewerRootView: ImageViewerRootView?
 
     init(sourceImageView: UIImageView, galeriaView: GaleriaView?) {
         self.sourceImageView = sourceImageView
