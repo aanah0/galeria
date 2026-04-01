@@ -1,6 +1,7 @@
 import { ContextType } from 'react';
 import type { Image } from 'react-native';
 import type { SFSymbol } from 'sf-symbols-typescript';
+import type { GaleriaViewProps } from './Galeria.types';
 type ImageSource = string | Parameters<typeof Image.resolveAssetSource>[0];
 export declare const GaleriaContext: import("react").Context<{
     initialIndex: number;
@@ -27,6 +28,7 @@ export declare const GaleriaContext: import("react").Context<{
     showOverlayAfterOpen: boolean;
     showPageIndicator: boolean;
     disableCache: boolean;
+    onOptionsPress: GaleriaViewProps["onOptionsPress"];
     viewerVisible: boolean;
     viewerCurrentIndex: number;
     setViewerVisible: (_visible: boolean, _currentIndex?: number) => void;

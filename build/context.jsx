@@ -17,6 +17,7 @@ export const GaleriaContext = createContext({
     showOverlayAfterOpen: false,
     showPageIndicator: true,
     disableCache: false,
+    onOptionsPress: undefined,
     viewerVisible: false,
     viewerCurrentIndex: 0,
     setViewerVisible: (_visible, _currentIndex) => { },

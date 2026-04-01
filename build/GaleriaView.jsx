@@ -162,6 +162,7 @@ const Root = forwardRef(function Root({ children, urls, theme = 'dark', ids, ima
         showOverlayAfterOpen,
         showPageIndicator,
         disableCache: false,
+        onOptionsPress: undefined,
         setOpen,
         urls,
         theme,

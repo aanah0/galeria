@@ -6,7 +6,7 @@ const GaleriaModule = requireNativeModule('Galeria');
 const NativeImage = requireNativeView('Galeria');
 const NativeOverlayView = requireNativeView('GaleriaOverlay');
 const noop = () => { };
-const GaleriaInner = forwardRef(function Galeria({ children, closeIconName, urls, theme = 'dark', ids, hideBlurOverlay = false, hidePageIndicators = false, imageBackgroundColor, showOverlayAfterOpen = false, showPageIndicator = true, disableCache = false, }, ref) {
+const GaleriaInner = forwardRef(function Galeria({ children, closeIconName, urls, theme = 'dark', ids, hideBlurOverlay = false, hidePageIndicators = false, imageBackgroundColor, showOverlayAfterOpen = false, showPageIndicator = true, disableCache = false, onOptionsPress, }, ref) {
     const [viewerVisible, setViewerVisible] = useState(false);
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0);
     const handleSetViewerVisible = useCallback((visible, currentIndex) => {
@@ -36,6 +36,7 @@ const GaleriaInner = forwardRef(function Galeria({ children, closeIconName, urls
         showOverlayAfterOpen,
         showPageIndicator,
         disableCache,
+        onOptionsPress,
         viewerVisible,
         viewerCurrentIndex,
         setViewerVisible: handleSetViewerVisible,
@@ -44,6 +45,7 @@ const GaleriaInner = forwardRef(function Galeria({ children, closeIconName, urls
         closeIconName, urls, theme, ids,
         hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
         showOverlayAfterOpen, showPageIndicator, disableCache,
+        onOptionsPress,
         viewerVisible, viewerCurrentIndex,
         handleSetViewerVisible, setViewerCurrentIndex,
     ]);
@@ -52,8 +54,14 @@ const GaleriaInner = forwardRef(function Galeria({ children, closeIconName, urls
       </GaleriaContext.Provider>);
 });
 const Galeria = Object.assign(GaleriaInner, {
-    Image({ onIndexChange: userOnIndexChange, ...restProps }) {
-        const { theme, urls, initialIndex, closeIconName, hideBlurOverlay, hidePageIndicators, imageBackgroundColor, showPageIndicator, disableCache, setViewerVisible, setViewerCurrentIndex, } = useContext(GaleriaContext);
+    Image({ onIndexChange: userOnIndexChange, onOptionsPress: imageOnOptionsPress, ...restProps }) {
+        const { theme, urls, initialIndex, closeIconName, hideBlurOverlay, hidePageIndicators, imageBackgroundColor, showPageIndicator, disableCache, onOptionsPress: contextOnOptionsPress, setViewerVisible, setViewerCurrentIndex, } = useContext(GaleriaContext);
+        const onOptionsPress = imageOnOptionsPress ?? contextOnOptionsPress;
+        const optionsMode = typeof onOptionsPress === 'function'
+            ? 'custom'
+            : onOptionsPress === 'share'
+                ? 'share'
+                : undefined;
         const handleIndexChange = useCallback((event) => {
             setViewerCurrentIndex(event.nativeEvent.currentIndex);
             userOnIndexChange?.(event);
@@ -64,7 +72,12 @@ const Galeria = Object.assign(GaleriaInner, {
         const handleViewerDismiss = useCallback((_event) => {
             setViewerVisible(false);
         }, [setViewerVisible]);
-        return (<NativeImage onIndexChange={handleIndexChange} onViewerOpen={handleViewerOpen} onViewerDismiss={handleViewerDismiss} closeIconName={closeIconName} theme={theme} hideBlurOverlay={restProps.hideBlurOverlay ?? hideBlurOverlay} hidePageIndicators={restProps.hidePageIndicators ?? (!(showPageIndicator ?? true) || hidePageIndicators)} imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor} disableCache={restProps.disableCache ?? disableCache} urls={urls?.map((url) => {
+        const handleOptionsPress = useCallback((event) => {
+            if (typeof onOptionsPress === 'function') {
+                onOptionsPress(event.nativeEvent.index);
+            }
+        }, [onOptionsPress]);
+        return (<NativeImage onIndexChange={handleIndexChange} onViewerOpen={handleViewerOpen} onViewerDismiss={handleViewerDismiss} onPressRightNavItemIcon={optionsMode === 'custom' ? handleOptionsPress : undefined} closeIconName={closeIconName} theme={theme} optionsMode={optionsMode} hideBlurOverlay={restProps.hideBlurOverlay ?? hideBlurOverlay} hidePageIndicators={restProps.hidePageIndicators ?? (!(showPageIndicator ?? true) || hidePageIndicators)} imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor} disableCache={restProps.disableCache ?? disableCache} urls={urls?.map((url) => {
                 if (typeof url === 'string') {
                     return url;
                 }
