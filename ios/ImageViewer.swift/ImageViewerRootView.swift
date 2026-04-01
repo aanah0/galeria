@@ -198,14 +198,15 @@ class ImageViewerRootView: UIView, RootViewType {
             onIndexChange?(initialIndex)
         }
 
-        let closeIcon = UIImage(systemName: "xmark")?.withTintColor(theme.tintColor, renderingMode: .alwaysOriginal)
+        let headerIconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
+        let closeIcon = UIImage(systemName: "xmark")?.withTintColor(headerIconColor, renderingMode: .alwaysOriginal)
         let closeBarButton = UIBarButtonItem(
             image: closeIcon,
             style: .plain,
             target: self,
             action: #selector(dismissViewer)
         )
-        closeBarButton.tintColor = theme.tintColor
+        closeBarButton.tintColor = headerIconColor
         navItem.leftBarButtonItem = closeBarButton
         navBar.items = [navItem]
         addSubview(navBar)
@@ -219,19 +220,19 @@ class ImageViewerRootView: UIView, RootViewType {
             case .theme(let newTheme):
                 self.theme = newTheme
                 backgroundView.backgroundColor = newTheme.color
-                closeButton?.tintColor = newTheme.tintColor
             case .closeIcon(let icon):
                 closeButton?.image = icon
             case .optionsMode(let mode):
                 self.currentOptionsMode = mode
-                let ellipsisIcon = UIImage(systemName: "ellipsis")?.withTintColor(theme.tintColor, renderingMode: .alwaysOriginal)
+                let headerIconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
+                let ellipsisIcon = UIImage(systemName: "ellipsis")?.withTintColor(headerIconColor, renderingMode: .alwaysOriginal)
                 let optionsButton = UIBarButtonItem(
                     image: ellipsisIcon,
                     style: .plain,
                     target: self,
                     action: #selector(didTapOptionsButton)
                 )
-                optionsButton.tintColor = theme.tintColor
+                optionsButton.tintColor = headerIconColor
                 navItem.rightBarButtonItem = optionsButton
             case .onIndexChange(let callback):
                 self.onIndexChange = callback
@@ -318,20 +319,12 @@ class ImageViewerRootView: UIView, RootViewType {
     }
 
     private func shareCurrentImage() {
-        guard let datasource = imageDatasource else { return }
-        let imageItem = datasource.imageItem(at: currentIndex)
-        var shareItem: Any?
+        guard let image = currentImageView?.image else { return }
+        presentShareSheet(items: [image])
+    }
 
-        switch imageItem {
-        case .url(let url, _):
-            shareItem = url
-        case .image(let image):
-            shareItem = image
-        }
-
-        guard let item = shareItem else { return }
-
-        let activityVC = UIActivityViewController(activityItems: [item], applicationActivities: nil)
+    private func presentShareSheet(items: [Any]) {
+        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
         if let windowScene = window?.windowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
             var topVC = rootVC

@@ -19,6 +19,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.annotation.Keep
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.lifecycle.ViewModelProvider
@@ -178,7 +179,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
             val decorView = dialog.window?.decorView as? ViewGroup ?: return@postDelayed
 
             val dp = { value: Int -> TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), context.resources.displayMetrics).toInt() }
-            val iconColor = if (theme == Theme.Light) Color.BLACK else Color.WHITE
+            val iconColor = Color.parseColor("#959595")
 
             val headerLayout = FrameLayout(activity).apply {
                 layoutParams = FrameLayout.LayoutParams(
@@ -224,11 +225,40 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     private fun shareCurrentImage(activity: Activity) {
         if (!::urls.isInitialized || urls.isEmpty()) return
         val url = urls.getOrNull(currentViewerIndex) ?: return
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, url)
-        }
-        activity.startActivity(Intent.createChooser(shareIntent, null))
+
+        Thread {
+            try {
+                val bitmap = Glide.with(activity)
+                    .asBitmap()
+                    .load(url)
+                    .submit()
+                    .get()
+
+                val shareDir = java.io.File(activity.cacheDir, "galeria_share")
+                shareDir.mkdirs()
+                val shareFile = java.io.File(shareDir, "share_image.jpg")
+                java.io.FileOutputStream(shareFile).use { out ->
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, out)
+                }
+
+                val contentUri = FileProvider.getUriForFile(
+                    activity,
+                    "${activity.packageName}.GaleriaFileProvider",
+                    shareFile
+                )
+
+                activity.runOnUiThread {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "image/jpeg"
+                        putExtra(Intent.EXTRA_STREAM, contentUri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    activity.startActivity(Intent.createChooser(shareIntent, null))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
     }
 
     private fun getXmarkDrawable(context: Context, color: Int): Drawable? {
