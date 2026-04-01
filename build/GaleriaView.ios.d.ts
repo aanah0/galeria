@@ -24,12 +24,13 @@ declare const Galeria: import("react").ForwardRefExoticComponent<{
     showOverlayAfterOpen: boolean;
     showPageIndicator: boolean;
     disableCache: boolean;
+    onOptionsPress: GaleriaViewProps["onOptionsPress"];
     viewerVisible: boolean;
     viewerCurrentIndex: number;
     setViewerVisible: (_visible: boolean, _currentIndex?: number) => void;
     setViewerCurrentIndex: (_index: number) => void;
-}, "theme" | "ids" | "urls" | "imageBackgroundColor" | "showOverlayAfterOpen" | "showPageIndicator" | "disableCache" | "closeIconName" | "hideBlurOverlay" | "hidePageIndicators">> & import("react").RefAttributes<GaleriaRef>> & {
-    Image({ onIndexChange: userOnIndexChange, ...restProps }: GaleriaViewProps): import("react").JSX.Element;
+}, "onOptionsPress" | "closeIconName" | "hideBlurOverlay" | "hidePageIndicators" | "imageBackgroundColor" | "disableCache" | "theme" | "ids" | "urls" | "showOverlayAfterOpen" | "showPageIndicator">> & import("react").RefAttributes<GaleriaRef>> & {
+    Image({ onIndexChange: userOnIndexChange, onOptionsPress: imageOnOptionsPress, ...restProps }: GaleriaViewProps): import("react").JSX.Element;
     Overlay({ children }: GaleriaOverlayProps): import("react").JSX.Element;
     Popup: React.FC<{
         disableTransition?: "web";

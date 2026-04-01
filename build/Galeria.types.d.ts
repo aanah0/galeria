@@ -47,6 +47,13 @@ export interface GaleriaViewProps {
      * Disable image caching in the viewer. When true, images are always fetched fresh.
      */
     disableCache?: boolean;
+    /**
+     * Controls the options button (ellipsis) on the right side of the viewer header.
+     * - `'share'`: Shows ellipsis button that opens the native share sheet with the active image.
+     * - `(index: number) => void`: Shows ellipsis button that calls your function with the current image index.
+     * - `null` or `undefined`: Hides the options button.
+     */
+    onOptionsPress?: 'share' | ((index: number) => void) | null;
 }
 export {};
 //# sourceMappingURL=Galeria.types.d.ts.map

@@ -49,7 +49,7 @@ public class GaleriaModule: Module {
     }
 
     View(GaleriaView.self) {
-      Events("onIndexChange", "onViewerOpen", "onViewerDismiss")
+      Events("onIndexChange", "onViewerOpen", "onViewerDismiss", "onPressRightNavItemIcon")
 
       OnViewDidUpdateProps { (view) in
         view.setupImageView()
@@ -69,8 +69,8 @@ public class GaleriaModule: Module {
       Prop("closeIconName") { (view, closeIconName: String?) in
         view.closeIconName = closeIconName
       }
-      Prop("rightNavItemIconName") { (view, rightNavItemIconName: String) in
-        view.rightNavItemIconName = rightNavItemIconName
+      Prop("optionsMode") { (view, optionsMode: String?) in
+        view.optionsMode = optionsMode
       }
 
       Prop("hideBlurOverlay") { (view, hideBlurOverlay: Bool?) in

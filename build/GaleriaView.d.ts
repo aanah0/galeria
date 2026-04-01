@@ -25,11 +25,12 @@ declare const Galeria: import("react").ForwardRefExoticComponent<{
     showOverlayAfterOpen: boolean;
     showPageIndicator: boolean;
     disableCache: boolean;
+    onOptionsPress: GaleriaViewProps["onOptionsPress"];
     viewerVisible: boolean;
     viewerCurrentIndex: number;
     setViewerVisible: (_visible: boolean, _currentIndex?: number) => void;
     setViewerCurrentIndex: (_index: number) => void;
-}, "theme" | "ids" | "urls" | "imageBackgroundColor" | "showOverlayAfterOpen" | "showPageIndicator">> & import("react").RefAttributes<GaleriaRef>> & {
+}, "imageBackgroundColor" | "theme" | "ids" | "urls" | "showOverlayAfterOpen" | "showPageIndicator">> & import("react").RefAttributes<GaleriaRef>> & {
     Image: typeof Image;
     Overlay: typeof Overlay;
     Popup: React.FC<{

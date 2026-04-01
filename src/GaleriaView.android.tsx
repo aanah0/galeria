@@ -1,7 +1,7 @@
 import { requireNativeModule, requireNativeView } from 'expo'
 
 import { forwardRef, useCallback, useContext, useImperativeHandle, useMemo, useState } from 'react'
-import { Image, StyleSheet } from 'react-native'
+import { Image, NativeSyntheticEvent, StyleSheet } from 'react-native'
 import {
   controlEdgeToEdgeValues,
   isEdgeToEdge,
@@ -20,14 +20,18 @@ const GaleriaModule = requireNativeModule('Galeria')
 
 const EDGE_TO_EDGE = isEdgeToEdge()
 
+type OptionsButtonPressEvent = NativeSyntheticEvent<{ index: number }>
+
 const NativeImage = requireNativeView<
-  GaleriaViewProps & {
+  Omit<GaleriaViewProps, 'onOptionsPress'> & {
     edgeToEdge: boolean
     urls?: string[]
     theme: 'dark' | 'light'
+    optionsMode?: 'share' | 'custom'
     onIndexChange?: (event: GaleriaIndexChangedEvent) => void
     onViewerOpen?: (event: GaleriaViewerOpenEvent) => void
     onViewerDismiss?: (event: GaleriaViewerDismissEvent) => void
+    onOptionsPress?: (event: OptionsButtonPressEvent) => void
     imageBackgroundColor?: string
   }
 >('Galeria')
@@ -43,7 +47,7 @@ const noop = () => {}
 
 const GaleriaInner = forwardRef<GaleriaRef, {
   children: React.ReactNode
-} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator' | 'disableCache'>>>(function Galeria({
+} & Partial<Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator' | 'disableCache' | 'onOptionsPress'>>>(function Galeria({
     children,
     urls,
     theme = 'dark',
@@ -52,6 +56,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
     showOverlayAfterOpen = false,
     showPageIndicator = true,
     disableCache = false,
+    onOptionsPress,
   }, ref) {
     const [viewerVisible, setViewerVisible] = useState(false)
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0)
@@ -80,6 +85,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
       showOverlayAfterOpen,
       showPageIndicator,
       disableCache,
+      onOptionsPress,
       initialIndex: 0,
       open: false as const,
       src: '',
@@ -90,7 +96,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
       setViewerVisible: handleSetViewerVisible,
       setViewerCurrentIndex,
     }), [
-      urls, theme, imageBackgroundColor, showOverlayAfterOpen, showPageIndicator, disableCache, ids,
+      urls, theme, imageBackgroundColor, showOverlayAfterOpen, showPageIndicator, disableCache, onOptionsPress, ids,
       viewerVisible, viewerCurrentIndex,
       handleSetViewerVisible, setViewerCurrentIndex,
     ])
@@ -105,9 +111,17 @@ const GaleriaInner = forwardRef<GaleriaRef, {
 const Galeria = Object.assign(
   GaleriaInner,
   {
-    Image({ edgeToEdge, onIndexChange: userOnIndexChange, ...restProps }: GaleriaViewProps) {
-      const { theme, urls, imageBackgroundColor, disableCache, setViewerVisible, setViewerCurrentIndex } =
+    Image({ edgeToEdge, onIndexChange: userOnIndexChange, onOptionsPress: imageOnOptionsPress, ...restProps }: GaleriaViewProps) {
+      const { theme, urls, imageBackgroundColor, disableCache, onOptionsPress: contextOnOptionsPress, setViewerVisible, setViewerCurrentIndex } =
         useContext(GaleriaContext)
+
+      const onOptionsPress = imageOnOptionsPress ?? contextOnOptionsPress
+
+      const optionsMode = typeof onOptionsPress === 'function'
+        ? 'custom' as const
+        : onOptionsPress === 'share'
+          ? 'share' as const
+          : undefined
 
       if (__DEV__) {
         controlEdgeToEdgeValues({ edgeToEdge })
@@ -126,13 +140,21 @@ const Galeria = Object.assign(
         setViewerVisible(false)
       }, [setViewerVisible])
 
+      const handleOptionsPress = useCallback((event: OptionsButtonPressEvent) => {
+        if (typeof onOptionsPress === 'function') {
+          onOptionsPress(event.nativeEvent.index)
+        }
+      }, [onOptionsPress])
+
       return (
         <NativeImage
           onIndexChange={handleIndexChange}
           onViewerOpen={handleViewerOpen}
           onViewerDismiss={handleViewerDismiss}
+          onOptionsPress={optionsMode === 'custom' ? handleOptionsPress : undefined}
           edgeToEdge={EDGE_TO_EDGE || (edgeToEdge ?? false)}
           theme={theme}
+          optionsMode={optionsMode}
           imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor}
           disableCache={restProps.disableCache ?? disableCache}
           urls={urls?.map((url) => {

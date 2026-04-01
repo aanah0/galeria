@@ -5,13 +5,23 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.graphics.Color
+import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
+import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.annotation.Keep
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.fragment.app.FragmentActivity
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.recyclerview.widget.RecyclerView
@@ -61,7 +71,10 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     var transitionOffsetX: Int? = 0
     var imageBackgroundColor: String? = null
     var disableCache: Boolean = false
+    var optionsMode: String? = null
+    val onOptionsPress by EventDispatcher()
     private var isSetup = false
+    private var currentViewerIndex: Int = 0
     val viewModel: ImageViewerActionViewModel by lazy {
         ViewModelProvider(getViewModelOwner(context)).get(ImageViewerActionViewModel::class.java)
     }
@@ -128,6 +141,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                 }
                 childView.setOnClickListener {
                     setupConfig()
+                    currentViewerIndex = initialIndex
                     val parsedBgColor = imageBackgroundColor?.let {
                         try { Color.parseColor(it) } catch (_: IllegalArgumentException) { null }
                     }
@@ -136,6 +150,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
                         imageBackgroundColor = parsedBgColor,
                         disableHiddenOriginalImage = disableHiddenOriginalImage,
                         onIndexChange = { index ->
+                            currentViewerIndex = index
                             onIndexChange(mapOf("currentIndex" to index))
                         },
                         onDismiss = {
@@ -145,6 +160,7 @@ class GaleriaView(context: Context) : ViewGroup(context) {
 
                     viewer?.show()
                     onViewerOpen(mapOf("currentIndex" to initialIndex))
+                    addHeaderOverlay()
                 }
             } else if (childView is ViewGroup) {
                 setupImageViewer(childView)
@@ -153,6 +169,110 @@ class GaleriaView(context: Context) : ViewGroup(context) {
     }
 
 
+
+    private fun addHeaderOverlay() {
+        val activity = getActivity(context)
+        Handler(Looper.getMainLooper()).postDelayed({
+            val fragmentManager = (activity as? FragmentActivity)?.supportFragmentManager ?: return@postDelayed
+            val dialogFragment = fragmentManager.fragments.lastOrNull { it is ImageViewerDialogFragment } as? ImageViewerDialogFragment ?: return@postDelayed
+            val dialog = dialogFragment.dialog ?: return@postDelayed
+            val decorView = dialog.window?.decorView as? ViewGroup ?: return@postDelayed
+
+            val dp = { value: Int -> TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value.toFloat(), context.resources.displayMetrics).toInt() }
+            val iconColor = Color.parseColor("#959595")
+
+            val headerLayout = FrameLayout(activity).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    dp(44) + getStatusBarHeight()
+                ).apply { gravity = Gravity.TOP }
+                setPadding(dp(16), getStatusBarHeight(), dp(16), 0)
+            }
+
+            // Close button (left)
+            val closeButton = ImageButton(activity).apply {
+                setImageDrawable(getXmarkDrawable(activity, iconColor))
+                setBackgroundColor(Color.TRANSPARENT)
+                layoutParams = FrameLayout.LayoutParams(dp(44), dp(44)).apply {
+                    gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                }
+                setOnClickListener { viewModel.dismiss() }
+            }
+            headerLayout.addView(closeButton)
+
+            // Options button (right) — only if optionsMode is set
+            if (optionsMode != null) {
+                val optionsButton = ImageButton(activity).apply {
+                    setImageDrawable(getEllipsisDrawable(activity, iconColor))
+                    setBackgroundColor(Color.TRANSPARENT)
+                    layoutParams = FrameLayout.LayoutParams(dp(44), dp(44)).apply {
+                        gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                    }
+                    setOnClickListener {
+                        when (optionsMode) {
+                            "share" -> shareCurrentImage(activity)
+                            "custom" -> onOptionsPress(mapOf("index" to currentViewerIndex))
+                        }
+                    }
+                }
+                headerLayout.addView(optionsButton)
+            }
+
+            decorView.addView(headerLayout)
+        }, 200)
+    }
+
+    private fun shareCurrentImage(activity: Activity) {
+        if (!::urls.isInitialized || urls.isEmpty()) return
+        val url = urls.getOrNull(currentViewerIndex) ?: return
+
+        Thread {
+            try {
+                val bitmap = Glide.with(activity)
+                    .asBitmap()
+                    .load(url)
+                    .submit()
+                    .get()
+
+                val shareDir = java.io.File(activity.cacheDir, "galeria_share")
+                shareDir.mkdirs()
+                val shareFile = java.io.File(shareDir, "share_image.jpg")
+                java.io.FileOutputStream(shareFile).use { out ->
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, out)
+                }
+
+                val contentUri = FileProvider.getUriForFile(
+                    activity,
+                    "${activity.packageName}.GaleriaFileProvider",
+                    shareFile
+                )
+
+                activity.runOnUiThread {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "image/jpeg"
+                        putExtra(Intent.EXTRA_STREAM, contentUri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    activity.startActivity(Intent.createChooser(shareIntent, null))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
+    }
+
+    private fun getXmarkDrawable(context: Context, color: Int): Drawable? {
+        // Use Android's built-in close icon
+        val drawable = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_close_clear_cancel)?.mutate()
+        drawable?.let { DrawableCompat.setTint(it, color) }
+        return drawable
+    }
+
+    private fun getEllipsisDrawable(context: Context, color: Int): Drawable? {
+        val drawable = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_more)?.mutate()
+        drawable?.let { DrawableCompat.setTint(it, color) }
+        return drawable
+    }
 
     private fun fakeStartView(view: View): ImageView {
         val customWidth = view.width

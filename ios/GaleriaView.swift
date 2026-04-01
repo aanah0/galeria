@@ -83,7 +83,7 @@ class GaleriaView: ExpoView {
   var urls: [String]?
   var initialIndex: Int?
   var closeIconName: String?
-  var rightNavItemIconName: String?
+  var optionsMode: String?
   var hideBlurOverlay: Bool = false
   var hidePageIndicators: Bool = false
   var disableCache: Bool = false
@@ -149,19 +149,19 @@ class GaleriaView: ExpoView {
         iconColor, renderingMode: .alwaysOriginal)
     {
       options.append(ImageViewerOption.closeIcon(closeIconImage))
-
     }
 
-    if let rightIconName = rightNavItemIconName,
-      let rightIconImage = UIImage(systemName: rightIconName)?.withTintColor(
-        iconColor, renderingMode: .alwaysOriginal)
-    {
-      let rightNavItemOption = ImageViewerOption.rightNavItemIcon(
-        rightIconImage,
-        onTap: { [weak self] index in
+    if let mode = optionsMode {
+      switch mode {
+      case "share":
+        options.append(.optionsMode(.share))
+      case "custom":
+        options.append(.optionsMode(.custom(onTap: { [weak self] index in
           self?.onPressRightNavItemIcon(["index": index])
-        })
-      options.append(rightNavItemOption)
+        })))
+      default:
+        break
+      }
     }
 
     options.append(

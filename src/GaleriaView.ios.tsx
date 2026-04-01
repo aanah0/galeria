@@ -1,7 +1,7 @@
 import { requireNativeModule, requireNativeView } from 'expo'
 
 import { forwardRef, useCallback, useContext, useImperativeHandle, useMemo, useState } from 'react'
-import { Image, StyleSheet } from 'react-native'
+import { Image, NativeSyntheticEvent, StyleSheet } from 'react-native'
 import type { SFSymbol } from 'sf-symbols-typescript'
 import { GaleriaContext } from './context'
 import {
@@ -15,14 +15,18 @@ import {
 
 const GaleriaModule = requireNativeModule('Galeria')
 
+type OptionsButtonPressEvent = NativeSyntheticEvent<{ index: number }>
+
 const NativeImage = requireNativeView<
   GaleriaViewProps & {
     urls?: string[]
     closeIconName?: SFSymbol
     theme: 'dark' | 'light'
+    optionsMode?: 'share' | 'custom'
     onIndexChange?: (event: GaleriaIndexChangedEvent) => void
     onViewerOpen?: (event: GaleriaViewerOpenEvent) => void
     onViewerDismiss?: (event: GaleriaViewerDismissEvent) => void
+    onPressRightNavItemIcon?: (event: OptionsButtonPressEvent) => void
     hideBlurOverlay?: boolean
     hidePageIndicators?: boolean
     imageBackgroundColor?: string
@@ -42,7 +46,7 @@ const noop = () => {}
 const GaleriaInner = forwardRef<GaleriaRef, {
   children: React.ReactNode
 } & Partial<
-  Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'closeIconName' | 'hideBlurOverlay' | 'hidePageIndicators' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator' | 'disableCache'>
+  Pick<GaleriaContext, 'theme' | 'ids' | 'urls' | 'closeIconName' | 'hideBlurOverlay' | 'hidePageIndicators' | 'imageBackgroundColor' | 'showOverlayAfterOpen' | 'showPageIndicator' | 'disableCache' | 'onOptionsPress'>
 >>(function Galeria({
     children,
     closeIconName,
@@ -55,6 +59,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
     showOverlayAfterOpen = false,
     showPageIndicator = true,
     disableCache = false,
+    onOptionsPress,
   }, ref) {
     const [viewerVisible, setViewerVisible] = useState(false)
     const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0)
@@ -88,6 +93,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
       showOverlayAfterOpen,
       showPageIndicator,
       disableCache,
+      onOptionsPress,
       viewerVisible,
       viewerCurrentIndex,
       setViewerVisible: handleSetViewerVisible,
@@ -96,6 +102,7 @@ const GaleriaInner = forwardRef<GaleriaRef, {
       closeIconName, urls, theme, ids,
       hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
       showOverlayAfterOpen, showPageIndicator, disableCache,
+      onOptionsPress,
       viewerVisible, viewerCurrentIndex,
       handleSetViewerVisible, setViewerCurrentIndex,
     ])
@@ -110,13 +117,21 @@ const GaleriaInner = forwardRef<GaleriaRef, {
 const Galeria = Object.assign(
   GaleriaInner,
   {
-    Image({ onIndexChange: userOnIndexChange, ...restProps }: GaleriaViewProps) {
+    Image({ onIndexChange: userOnIndexChange, onOptionsPress: imageOnOptionsPress, ...restProps }: GaleriaViewProps) {
       const {
         theme, urls, initialIndex, closeIconName,
         hideBlurOverlay, hidePageIndicators, imageBackgroundColor,
-        showPageIndicator, disableCache,
+        showPageIndicator, disableCache, onOptionsPress: contextOnOptionsPress,
         setViewerVisible, setViewerCurrentIndex,
       } = useContext(GaleriaContext)
+
+      const onOptionsPress = imageOnOptionsPress ?? contextOnOptionsPress
+
+      const optionsMode = typeof onOptionsPress === 'function'
+        ? 'custom' as const
+        : onOptionsPress === 'share'
+          ? 'share' as const
+          : undefined
 
       const handleIndexChange = useCallback((event: GaleriaIndexChangedEvent) => {
         setViewerCurrentIndex(event.nativeEvent.currentIndex)
@@ -131,13 +146,21 @@ const Galeria = Object.assign(
         setViewerVisible(false)
       }, [setViewerVisible])
 
+      const handleOptionsPress = useCallback((event: OptionsButtonPressEvent) => {
+        if (typeof onOptionsPress === 'function') {
+          onOptionsPress(event.nativeEvent.index)
+        }
+      }, [onOptionsPress])
+
       return (
         <NativeImage
           onIndexChange={handleIndexChange}
           onViewerOpen={handleViewerOpen}
           onViewerDismiss={handleViewerDismiss}
+          onPressRightNavItemIcon={optionsMode === 'custom' ? handleOptionsPress : undefined}
           closeIconName={closeIconName}
           theme={theme}
+          optionsMode={optionsMode}
           hideBlurOverlay={restProps.hideBlurOverlay ?? hideBlurOverlay}
           hidePageIndicators={restProps.hidePageIndicators ?? (!(showPageIndicator ?? true) || hidePageIndicators)}
           imageBackgroundColor={restProps.imageBackgroundColor ?? imageBackgroundColor}
