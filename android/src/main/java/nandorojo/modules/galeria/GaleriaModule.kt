@@ -29,7 +29,8 @@ class GaleriaModule : Module() {
             Events(
                 "onIndexChange",
                 "onViewerOpen",
-                "onViewerDismiss"
+                "onViewerDismiss",
+                "onOptionsPress"
             )
             // Defines a setter for the `name` prop.
             Prop("theme") { view: GaleriaView, theme: Theme ->
@@ -58,6 +59,9 @@ class GaleriaModule : Module() {
             }
             Prop("disableCache") { view: GaleriaView, disableCache: Boolean ->
                 view.disableCache = disableCache
+            }
+            Prop("optionsMode") { view: GaleriaView, optionsMode: String? ->
+                view.optionsMode = optionsMode
             }
         }
     }

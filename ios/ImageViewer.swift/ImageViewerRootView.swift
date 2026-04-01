@@ -37,7 +37,7 @@ class ImageViewerRootView: UIView, RootViewType {
     }()
 
     private lazy var navItem = UINavigationItem()
-    private var onRightNavBarTapped: ((Int) -> Void)?
+    private var currentOptionsMode: OptionsMode?
 
     private(set) var currentIndex: Int = 0
     private var initialViewController: ImageViewerController?
@@ -112,7 +112,7 @@ class ImageViewerRootView: UIView, RootViewType {
         onDismiss = nil
         onIndexChange = nil
         onOpen = nil
-        onRightNavBarTapped = nil
+        currentOptionsMode = nil
         sourceImage = nil
         transition.verticalDismissGestureRecognizer.view?.removeGestureRecognizer(transition.verticalDismissGestureRecognizer)
 
@@ -198,21 +198,22 @@ class ImageViewerRootView: UIView, RootViewType {
             onIndexChange?(initialIndex)
         }
 
+        let closeIcon = UIImage(systemName: "xmark")?.withTintColor(theme.tintColor, renderingMode: .alwaysOriginal)
         let closeBarButton = UIBarButtonItem(
-            title: NSLocalizedString("Close", comment: "Close button title"),
+            image: closeIcon,
             style: .plain,
             target: self,
             action: #selector(dismissViewer)
         )
         closeBarButton.tintColor = theme.tintColor
-        navItem.rightBarButtonItem = closeBarButton
+        navItem.leftBarButtonItem = closeBarButton
         navBar.items = [navItem]
         addSubview(navBar)
     }
 
     private func applyOptions() {
-        let closeButton = navItem.rightBarButtonItem
-        
+        let closeButton = navItem.leftBarButtonItem
+
         options.forEach { option in
             switch option {
             case .theme(let newTheme):
@@ -221,32 +222,17 @@ class ImageViewerRootView: UIView, RootViewType {
                 closeButton?.tintColor = newTheme.tintColor
             case .closeIcon(let icon):
                 closeButton?.image = icon
-            case .rightNavItemTitle(let title, let onTap):
-                let customButton = UIBarButtonItem(
-                    title: title,
+            case .optionsMode(let mode):
+                self.currentOptionsMode = mode
+                let ellipsisIcon = UIImage(systemName: "ellipsis")?.withTintColor(theme.tintColor, renderingMode: .alwaysOriginal)
+                let optionsButton = UIBarButtonItem(
+                    image: ellipsisIcon,
                     style: .plain,
                     target: self,
-                    action: #selector(didTapRightNavItem)
+                    action: #selector(didTapOptionsButton)
                 )
-                if let closeButton = closeButton {
-                    navItem.rightBarButtonItems = [closeButton, customButton]
-                } else {
-                    navItem.rightBarButtonItem = customButton
-                }
-                onRightNavBarTapped = onTap
-            case .rightNavItemIcon(let icon, let onTap):
-                let customButton = UIBarButtonItem(
-                    image: icon,
-                    style: .plain,
-                    target: self,
-                    action: #selector(didTapRightNavItem)
-                )
-                if let closeButton = closeButton {
-                    navItem.rightBarButtonItems = [closeButton, customButton]
-                } else {
-                    navItem.rightBarButtonItem = customButton
-                }
-                onRightNavBarTapped = onTap
+                optionsButton.tintColor = theme.tintColor
+                navItem.rightBarButtonItem = optionsButton
             case .onIndexChange(let callback):
                 self.onIndexChange = callback
             case .onOpen(let callback):
@@ -321,8 +307,42 @@ class ImageViewerRootView: UIView, RootViewType {
         )
     }
 
-    @objc private func didTapRightNavItem() {
-        onRightNavBarTapped?(currentIndex)
+    @objc private func didTapOptionsButton() {
+        guard let mode = currentOptionsMode else { return }
+        switch mode {
+        case .share:
+            shareCurrentImage()
+        case .custom(let onTap):
+            onTap(currentIndex)
+        }
+    }
+
+    private func shareCurrentImage() {
+        guard let datasource = imageDatasource else { return }
+        let imageItem = datasource.imageItem(at: currentIndex)
+        var shareItem: Any?
+
+        switch imageItem {
+        case .url(let url, _):
+            shareItem = url
+        case .image(let image):
+            shareItem = image
+        }
+
+        guard let item = shareItem else { return }
+
+        let activityVC = UIActivityViewController(activityItems: [item], applicationActivities: nil)
+        if let windowScene = window?.windowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            var topVC = rootVC
+            while let presented = topVC.presentedViewController {
+                topVC = presented
+            }
+            if let popover = activityVC.popoverPresentationController {
+                popover.barButtonItem = navItem.rightBarButtonItem
+            }
+            topVC.present(activityVC, animated: true)
+        }
     }
 }
 

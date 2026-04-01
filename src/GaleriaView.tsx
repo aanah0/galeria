@@ -253,6 +253,7 @@ const Root = forwardRef<GaleriaRef, {
     showOverlayAfterOpen,
     showPageIndicator,
     disableCache: false,
+    onOptionsPress: undefined,
     setOpen,
     urls,
     theme,
