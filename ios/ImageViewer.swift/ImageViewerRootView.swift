@@ -320,7 +320,13 @@ class ImageViewerRootView: UIView, RootViewType {
 
     private func shareCurrentImage() {
         guard let image = currentImageView?.image else { return }
-        presentShareSheet(items: [image])
+        guard let data = image.pngData() else { return }
+
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileURL = tempDir.appendingPathComponent("Image.png")
+        try? data.write(to: fileURL)
+
+        presentShareSheet(items: [fileURL])
     }
 
     private func presentShareSheet(items: [Any]) {
