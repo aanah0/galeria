@@ -33,6 +33,9 @@ class ImageViewerRootView: UIView, RootViewType {
         navBar.isTranslucent = true
         navBar.setBackgroundImage(UIImage(), for: .default)
         navBar.shadowImage = UIImage()
+        if #available(iOS 26.0, *) {
+            navBar.defaultStyle = .inline
+        }
         return navBar
     }()
 
@@ -161,6 +164,26 @@ class ImageViewerRootView: UIView, RootViewType {
         cleanup()
     }
 
+    private func makeHeaderButton(systemName: String, action: Selector) -> UIButton {
+        let iconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
+        let bgColor = UIColor(red: 51.0/255.0, green: 51.0/255.0, blue: 51.0/255.0, alpha: 1.0)
+
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+        let icon = UIImage(systemName: systemName, withConfiguration: config)?.withTintColor(iconColor, renderingMode: .alwaysOriginal)
+        button.setImage(icon, for: .normal)
+        button.backgroundColor = bgColor
+        button.layer.cornerRadius = 24
+        button.clipsToBounds = true
+        button.addTarget(self, action: action, for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 48),
+            button.heightAnchor.constraint(equalToConstant: 48),
+        ])
+        return button
+    }
+
     private func setupViews() {
         addSubview(backgroundView)
 
@@ -198,15 +221,11 @@ class ImageViewerRootView: UIView, RootViewType {
             onIndexChange?(initialIndex)
         }
 
-        let headerIconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
-        let closeIcon = UIImage(systemName: "xmark")?.withTintColor(headerIconColor, renderingMode: .alwaysOriginal)
-        let closeBarButton = UIBarButtonItem(
-            image: closeIcon,
-            style: .plain,
-            target: self,
-            action: #selector(dismissViewer)
-        )
-        closeBarButton.tintColor = headerIconColor
+        let closeBtn = makeHeaderButton(systemName: "xmark", action: #selector(dismissViewer))
+        let closeBarButton = UIBarButtonItem(customView: closeBtn)
+        if #available(iOS 26.0, *) {
+            closeBarButton.hidesSharedBackground = true
+        }
         navItem.leftBarButtonItem = closeBarButton
         navBar.items = [navItem]
         addSubview(navBar)
@@ -221,19 +240,20 @@ class ImageViewerRootView: UIView, RootViewType {
                 self.theme = newTheme
                 backgroundView.backgroundColor = newTheme.color
             case .closeIcon(let icon):
-                closeButton?.image = icon
+                if let btn = closeButton?.customView as? UIButton {
+                    let iconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
+                    btn.setImage(icon.withTintColor(iconColor, renderingMode: .alwaysOriginal), for: .normal)
+                } else {
+                    closeButton?.image = icon
+                }
             case .optionsMode(let mode):
                 self.currentOptionsMode = mode
-                let headerIconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
-                let ellipsisIcon = UIImage(systemName: "ellipsis")?.withTintColor(headerIconColor, renderingMode: .alwaysOriginal)
-                let optionsButton = UIBarButtonItem(
-                    image: ellipsisIcon,
-                    style: .plain,
-                    target: self,
-                    action: #selector(didTapOptionsButton)
-                )
-                optionsButton.tintColor = headerIconColor
-                navItem.rightBarButtonItem = optionsButton
+                let optionsBtn = makeHeaderButton(systemName: "ellipsis", action: #selector(didTapOptionsButton))
+                let optionsBarButton = UIBarButtonItem(customView: optionsBtn)
+                if #available(iOS 26.0, *) {
+                    optionsBarButton.hidesSharedBackground = true
+                }
+                navItem.rightBarButtonItem = optionsBarButton
             case .onIndexChange(let callback):
                 self.onIndexChange = callback
             case .onOpen(let callback):
@@ -338,7 +358,7 @@ class ImageViewerRootView: UIView, RootViewType {
                 topVC = presented
             }
             if let popover = activityVC.popoverPresentationController {
-                popover.barButtonItem = navItem.rightBarButtonItem
+                popover.sourceView = navItem.rightBarButtonItem?.customView
             }
             topVC.present(activityVC, animated: true)
         }
