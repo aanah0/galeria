@@ -28,15 +28,8 @@ class ImageViewerRootView: UIView, RootViewType {
         return view
     }()
 
-    private(set) lazy var navBar: UINavigationBar = {
-        let navBar = UINavigationBar(frame: .zero)
-        navBar.isTranslucent = true
-        navBar.setBackgroundImage(UIImage(), for: .default)
-        navBar.shadowImage = UIImage()
-        return navBar
-    }()
-
-    private lazy var navItem = UINavigationItem()
+    private var closeButton: UIButton!
+    private var optionsButton: UIButton?
     private var currentOptionsMode: OptionsMode?
 
     private(set) var currentIndex: Int = 0
@@ -68,12 +61,14 @@ class ImageViewerRootView: UIView, RootViewType {
     var prefersHomeIndicatorAutoHidden: Bool { false }
 
     func willAppear(animated: Bool) {
-        navBar.alpha = 0
+        closeButton.alpha = 0
+        optionsButton?.alpha = 0
     }
 
     func didAppear(animated: Bool) {
         UIView.animate(withDuration: 0.25) {
-            self.navBar.alpha = 1.0
+            self.closeButton.alpha = 1.0
+            self.optionsButton?.alpha = 1.0
         }
         NotificationCenter.default.post(
             name: .galeriaOverlayToggle,
@@ -85,7 +80,8 @@ class ImageViewerRootView: UIView, RootViewType {
 
     func willDisappear(animated: Bool) {
         UIView.animate(withDuration: 0.25) {
-            self.navBar.alpha = 0
+            self.closeButton.alpha = 0
+            self.optionsButton?.alpha = 0
         }
     }
 
@@ -161,6 +157,26 @@ class ImageViewerRootView: UIView, RootViewType {
         cleanup()
     }
 
+    private func makeHeaderButton(systemName: String, action: Selector) -> UIButton {
+        let iconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
+        let bgColor = UIColor(red: 51.0/255.0, green: 51.0/255.0, blue: 51.0/255.0, alpha: 1.0)
+
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .thin)
+        let icon = UIImage(systemName: systemName, withConfiguration: config)?.withTintColor(iconColor, renderingMode: .alwaysOriginal)
+        button.setImage(icon, for: .normal)
+        button.backgroundColor = bgColor
+        button.layer.cornerRadius = 24
+        button.clipsToBounds = true
+        button.addTarget(self, action: action, for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 48),
+            button.heightAnchor.constraint(equalToConstant: 48),
+        ])
+        return button
+    }
+
     private func setupViews() {
         addSubview(backgroundView)
 
@@ -198,42 +214,24 @@ class ImageViewerRootView: UIView, RootViewType {
             onIndexChange?(initialIndex)
         }
 
-        let headerIconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
-        let closeIcon = UIImage(systemName: "xmark")?.withTintColor(headerIconColor, renderingMode: .alwaysOriginal)
-        let closeBarButton = UIBarButtonItem(
-            image: closeIcon,
-            style: .plain,
-            target: self,
-            action: #selector(dismissViewer)
-        )
-        closeBarButton.tintColor = headerIconColor
-        navItem.leftBarButtonItem = closeBarButton
-        navBar.items = [navItem]
-        addSubview(navBar)
+        closeButton = makeHeaderButton(systemName: "xmark", action: #selector(dismissViewer))
+        addSubview(closeButton)
     }
 
     private func applyOptions() {
-        let closeButton = navItem.leftBarButtonItem
-
         options.forEach { option in
             switch option {
             case .theme(let newTheme):
                 self.theme = newTheme
                 backgroundView.backgroundColor = newTheme.color
             case .closeIcon(let icon):
-                closeButton?.image = icon
+                let iconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
+                closeButton.setImage(icon.withTintColor(iconColor, renderingMode: .alwaysOriginal), for: .normal)
             case .optionsMode(let mode):
                 self.currentOptionsMode = mode
-                let headerIconColor = UIColor(red: 149.0/255.0, green: 149.0/255.0, blue: 149.0/255.0, alpha: 1.0)
-                let ellipsisIcon = UIImage(systemName: "ellipsis")?.withTintColor(headerIconColor, renderingMode: .alwaysOriginal)
-                let optionsButton = UIBarButtonItem(
-                    image: ellipsisIcon,
-                    style: .plain,
-                    target: self,
-                    action: #selector(didTapOptionsButton)
-                )
-                optionsButton.tintColor = headerIconColor
-                navItem.rightBarButtonItem = optionsButton
+                let optionsBtn = makeHeaderButton(systemName: "ellipsis", action: #selector(didTapOptionsButton))
+                self.optionsButton = optionsBtn
+                addSubview(optionsBtn)
             case .onIndexChange(let callback):
                 self.onIndexChange = callback
             case .onOpen(let callback):
@@ -280,15 +278,9 @@ class ImageViewerRootView: UIView, RootViewType {
             child.view.layoutIfNeeded()
         }
 
-        let navBarHeight: CGFloat = 44
-        let statusBarHeight = safeAreaInsets.top
-        let horizontalPadding: CGFloat = 16
-        navBar.frame = CGRect(
-            x: horizontalPadding,
-            y: statusBarHeight,
-            width: bounds.width - (horizontalPadding * 2),
-            height: navBarHeight
-        )
+        let statusBarTop = safeAreaInsets.top
+        closeButton.frame = CGRect(x: 16, y: statusBarTop + 16, width: 48, height: 48)
+        optionsButton?.frame = CGRect(x: bounds.width - 16 - 48, y: statusBarTop + 16, width: 48, height: 48)
     }
 
     @objc private func dismissViewer() {
@@ -296,10 +288,11 @@ class ImageViewerRootView: UIView, RootViewType {
     }
 
     @objc private func didSingleTap() {
-        let currentAlpha = navBar.alpha
+        let currentAlpha = closeButton.alpha
         let newAlpha: CGFloat = currentAlpha > 0.5 ? 0.0 : 1.0
         UIView.animate(withDuration: 0.235) {
-            self.navBar.alpha = newAlpha
+            self.closeButton.alpha = newAlpha
+            self.optionsButton?.alpha = newAlpha
         }
         NotificationCenter.default.post(
             name: .galeriaOverlayToggle,
@@ -338,7 +331,7 @@ class ImageViewerRootView: UIView, RootViewType {
                 topVC = presented
             }
             if let popover = activityVC.popoverPresentationController {
-                popover.barButtonItem = navItem.rightBarButtonItem
+                popover.sourceView = optionsButton
             }
             topVC.present(activityVC, animated: true)
         }
@@ -361,7 +354,8 @@ extension ImageViewerRootView: MatchTransitionDelegate {
     }
 
     func matchTransitionWillBegin(transition: MatchTransition) {
-        navBar.alpha = 0
+        closeButton.alpha = 0
+        optionsButton?.alpha = 0
         transition.overlayView?.isHidden = hideBlurOverlay
     }
 }
